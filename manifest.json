@@ -3,12 +3,12 @@
   "name": "SCIENCE SPACE RUN",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "แอนดรอยด์-โครม-192x192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "icon-512.png",
+      "src": "แอนดรอยด์-โครม-512x512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
