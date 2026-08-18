@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+ <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#78A3D4">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</script>
+
 <title>🚀 SCIENCE SPACE RUN</title>
 <style>
   :root{
@@ -1870,7 +1875,15 @@ function drawParticles(dt){
 renderHighScores();
 
 })();
-
+<script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker Registered!', reg))
+          .catch((err) => console.log('Service Worker Registration Failed:', err));
+      });
+    }
+  </script>
 </script>
 </body>
 </html>
