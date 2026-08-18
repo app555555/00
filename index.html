@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<title>🚀 SCIENCE SPACE RUN</title>
+<style>
+  :root{
+    --neon-blue:#4bd8ff;
+    --neon-purple:#a95bff;
+    --neon-pink:#ff5bd0;
+    --deep1:#050414;
+    --deep2:#0b0730;
+    --white:#f4f6ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
+  html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif; color:var(--white);
+    display:flex;align-items:center;justify-content:center;}
+  /* On wide desktop screens, keep the game at a phone-like aspect ratio, centered,
+     instead of stretching the vertical shooter across the whole window. */
+  #gameContainer{
+    position:relative;overflow:hidden;
+    width:100vw;height:100vh;max-width:520px;
+    border:3px solid transparent;
+    border-radius:20px;
+    background:
+      radial-gradient(ellipse at 50% 20%,var(--deep2),var(--deep1) 70%) padding-box,
+      linear-gradient(135deg,var(--neon-blue),var(--neon-purple),var(--neon-pink)) border-box;
+    box-shadow:
+      inset 0 0 30px rgba(120,140,255,.18),
+      0 0 24px rgba(120,140,255,.5),
+      0 0 55px rgba(169,91,255,.3);
+  }
+  @media (min-width:640px) and (min-height:480px){
+    #gameContainer{
+      width:min(94vw,720px);
+      height:min(94vh,1240px);
+      max-width:720px;
+      border-radius:26px;
+      box-shadow:
+        inset 0 0 34px rgba(120,140,255,.18),
+        0 0 30px rgba(120,140,255,.5),
+        0 0 70px rgba(169,91,255,.35),
+        0 30px 90px rgba(0,0,0,.7);
+    }
+  }
+  canvas{position:absolute;top:0;left:0;display:block;}
+  #gameCanvas{cursor:pointer;}
+
+  /* ---------- generic overlay screens ---------- */
+  .screen{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;z-index:20; padding:20px; gap:14px;
+  }
+  .hidden{display:none !important;}
+
+  .title-glow{
+    font-size:clamp(28px,7vw,64px); font-weight:900; letter-spacing:2px;
+    background:linear-gradient(90deg,var(--neon-blue),var(--neon-purple),var(--neon-pink));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 40px rgba(169,91,255,.5);
+    animation:floaty 4s ease-in-out infinite;
+  }
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .subtitle{font-size:clamp(13px,2.6vw,18px);color:#c8d0ff;opacity:.9;}
+  .tagline{font-size:clamp(11px,2.2vw,15px);color:#8ea0ff;max-width:520px;opacity:.85;}
+
+  .glass{
+    background:rgba(20,18,50,.45);
+    backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+  }
+
+  .neon-btn{
+    position:relative; padding:14px 30px; margin:6px; font-size:clamp(14px,2.4vw,18px);
+    font-weight:700; color:var(--white); background:linear-gradient(135deg,rgba(75,216,255,.15),rgba(169,91,255,.15));
+    border:1px solid rgba(150,200,255,.5); border-radius:14px; cursor:pointer;
+    box-shadow:0 0 18px rgba(120,140,255,.25); transition:transform .15s, box-shadow .15s;
+    letter-spacing:.5px;
+  }
+  .neon-btn:hover{transform:translateY(-2px) scale(1.03); box-shadow:0 0 28px rgba(150,180,255,.55);}
+  .neon-btn:active{transform:scale(.95); box-shadow:0 0 10px rgba(150,180,255,.4);}
+  .neon-btn.small{padding:8px 18px;font-size:13px;}
+
+  #shipPreview{font-size:70px; filter:drop-shadow(0 0 20px #6cf); animation:hover 3s ease-in-out infinite;}
+  @keyframes hover{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0; z-index:15; display:flex; justify-content:space-between;
+    align-items:flex-start; padding:10px 14px; pointer-events:none; font-size:clamp(12px,2.2vw,16px); font-weight:700;
+  }
+  #hud .glass{ pointer-events:auto; padding:8px 14px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+  #hearts span{filter:drop-shadow(0 0 6px #ff4d6d);}
+  #hearts span.lost{opacity:.25; filter:none;}
+  #planetLabel{font-size:clamp(11px,2vw,14px); color:#bcd; opacity:.85;}
+  #speedLabel{font-size:clamp(11px,2vw,14px); color:#ffd27a;}
+
+  #boostBtn{
+    position:absolute; z-index:16; bottom:110px; right:16px; pointer-events:auto;
+    width:78px;height:78px;border-radius:50%; display:flex;align-items:center;justify-content:center;
+    flex-direction:column; font-size:10px; font-weight:800; color:#fff; line-height:1.3;
+    background:radial-gradient(circle at 35% 30%,#ffe37a,#ff9d3d 60%,#a94b00);
+    border:2px solid rgba(255,255,255,.6); box-shadow:0 0 22px rgba(255,170,60,.6);
+    cursor:pointer;
+  }
+  #boostBtn:active{transform:scale(.9);}
+  #boostBtn.disabled{filter:grayscale(1) brightness(.5); box-shadow:none;}
+
+  #laserBtn{
+    position:absolute; z-index:16; bottom:110px; left:16px; pointer-events:auto;
+    width:78px;height:78px;border-radius:50%; display:flex;align-items:center;justify-content:center;
+    flex-direction:column; font-size:10px; font-weight:800; color:#fff; line-height:1.3;
+    background:radial-gradient(circle at 35% 30%,#ffd0f0,#ff5bd0 60%,#7a0f5c);
+    border:2px solid rgba(255,255,255,.6); box-shadow:0 0 22px rgba(255,91,208,.65);
+    cursor:pointer;
+  }
+  #laserBtn:active{transform:scale(.88);}
+  #laserBtn.disabled{filter:grayscale(1) brightness(.5); box-shadow:none;}
+  .laser-beam{position:absolute; z-index:14; pointer-events:none; background:linear-gradient(180deg,#fff,#ff5bd0); border-radius:6px; box-shadow:0 0 14px #ff5bd0,0 0 26px #ff5bd0;}
+
+  #touchControls{
+    position:absolute; z-index:16; bottom:16px; left:0; right:0; display:flex; justify-content:space-between;
+    padding:0 16px; pointer-events:none;
+  }
+  #touchControls button{
+    pointer-events:auto; width:64px;height:64px;border-radius:50%; font-size:26px; color:#fff;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.3); backdrop-filter:blur(6px);
+  }
+  #touchControls button:active{background:rgba(255,255,255,.25);}
+
+  #swipeHint{
+    position:absolute; z-index:16; bottom:20px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:rgba(255,255,255,.55); pointer-events:none; letter-spacing:.5px;
+    display:flex; align-items:center; gap:6px; animation:swipePulse 2.4s ease-in-out infinite;
+  }
+  @keyframes swipePulse{0%,100%{opacity:.35}50%{opacity:.85}}
+
+  #pauseBtn, #soundBtn{
+    pointer-events:auto; width:40px;height:40px;border-radius:50%; border:1px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.08); color:#fff; font-size:16px; cursor:pointer;
+  }
+  #topRightIcons{position:absolute; top:10px; right:10px; z-index:17; display:flex; gap:8px; pointer-events:auto;}
+
+  /* floating combat text */
+  .float-txt{position:absolute; z-index:18; font-weight:900; pointer-events:none; text-shadow:0 0 10px #000;
+    animation:floatUp 1s ease-out forwards;}
+  @keyframes floatUp{0%{opacity:1; transform:translateY(0);}100%{opacity:0; transform:translateY(-60px);}}
+
+  /* ---------- dialog / question panel ---------- */
+  #dialogPanel{
+    position:absolute; z-index:25; left:50%; bottom:0; transform:translateX(-50%);
+    width:min(560px,94vw); padding:16px 18px 20px; display:flex; flex-direction:column; gap:10px;
+    border-radius:20px 20px 0 0; animation:slideUp .3s ease-out;
+  }
+  @keyframes slideUp{from{transform:translate(-50%,100%)}to{transform:translate(-50%,0)}}
+  #dialogSpeaker{font-weight:900; font-size:15px; display:flex; align-items:center; gap:8px;}
+  #dialogSpeaker .avatar{font-size:30px; filter:drop-shadow(0 0 10px currentColor);}
+  #dialogText{font-size:14px; line-height:1.5; color:#e8eaff; min-height:38px;}
+  #choices{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .choiceBtn{
+    padding:10px 8px; font-size:13px; font-weight:600; text-align:left; color:#fff; cursor:pointer;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.25); border-radius:10px;
+  }
+  .choiceBtn:active{background:rgba(255,255,255,.2);}
+  .choiceBtn.correct{background:rgba(70,220,130,.35); border-color:#5f6;}
+  .choiceBtn.wrong{background:rgba(255,80,90,.35); border-color:#f66;}
+  #dialogFeedback{font-size:13px; font-weight:700; min-height:18px;}
+  #dialogContinue{align-self:flex-end;}
+
+  /* boss hp bar */
+  #bossBar{position:absolute; z-index:16; top:70px; left:50%; transform:translateX(-50%); width:min(420px,88vw);}
+  #bossBar .label{font-size:11px; text-align:center; letter-spacing:2px; color:#ffb3d9; margin-bottom:2px;}
+  #bossHpOuter{height:16px; border-radius:10px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.3); overflow:hidden;}
+  #bossHpInner{height:100%; width:100%; background:linear-gradient(90deg,#ff5bd0,#a95bff); transition:width .3s;}
+
+  /* screen shake */
+  .shake{animation:shakeAnim .35s;}
+  @keyframes shakeAnim{
+    0%,100%{transform:translate(0,0)}
+    20%{transform:translate(-8px,4px)}
+    40%{transform:translate(8px,-4px)}
+    60%{transform:translate(-6px,-4px)}
+    80%{transform:translate(6px,4px)}
+  }
+
+  .stat-row{display:flex; justify-content:space-between; width:min(320px,80vw); font-size:14px; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,.15);}
+  .rank-tag{font-size:clamp(16px,3vw,22px); font-weight:900; margin-top:4px; letter-spacing:1px;
+    background:linear-gradient(90deg,#ffe37a,#ff9d3d); -webkit-background-clip:text; background-clip:text; color:transparent;}
+
+  #hsList{width:min(340px,86vw); text-align:left; font-size:14px;}
+  #hsList div{display:flex; justify-content:space-between; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.08);}
+  #nameInputRow{display:flex; gap:8px; align-items:center;}
+  #nameInputRow input{padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08); color:#fff; font-size:14px; width:170px;}
+
+  .map-row{display:flex; flex-wrap:wrap; justify-content:center; gap:10px; max-width:640px;}
+  .map-node{padding:10px 14px; border-radius:14px; font-size:13px; font-weight:700;}
+  .map-node.locked{opacity:.35;}
+  .map-node.done{border-color:#7f7 !important;}
+
+  /* rocket returning-to-earth ending animation */
+  @keyframes returnFlight{
+    0%{transform:translate(160px,-30px) rotate(35deg) scale(.7); opacity:0;}
+    12%{opacity:1;}
+    55%{transform:translate(0,0) rotate(15deg) scale(1.15);}
+    100%{transform:translate(-170px,40px) rotate(-8deg) scale(.6); opacity:0;}
+  }
+  .return-flight{ display:inline-block; animation:returnFlight 2.3s ease-in-out forwards; }
+  @keyframes earthPop{
+    0%{transform:scale(.4); opacity:0;}
+    60%{transform:scale(1.15); opacity:1;}
+    100%{transform:scale(1); opacity:1;}
+  }
+  .earth-pop{ display:inline-block; animation:earthPop .7s ease-out forwards; }
+
+  @media (max-width:480px){
+    #dialogPanel{width:100vw; border-radius:16px 16px 0 0;}
+    #choices{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- ============ START SCREEN ============ -->
+  <div id="startScreen" class="screen">
+    <div id="shipPreview">🚀</div>
+    <div class="title-glow">SCIENCE SPACE RUN</div>
+    <div class="subtitle">ภารกิจสำรวจระบบสุริยะ</div>
+    <div class="tagline">ขับยาน ฝ่าดาวเคราะห์ ไขปริศนา และค้นหาความลับจากจักรวาล</div>
+    <div>
+      <button class="neon-btn" id="btnStart">🚀 START MISSION</button><br>
+      <button class="neon-btn small" id="btnHowTo">📖 HOW TO PLAY</button>
+      <button class="neon-btn small" id="btnHighScore">🏆 HIGH SCORE</button>
+    </div>
+  </div>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <div id="howToScreen" class="screen hidden">
+    <div class="glass" style="padding:22px 26px;max-width:520px;">
+      <div class="title-glow" style="font-size:26px;">วิธีเล่น</div>
+      <p class="tagline" style="text-align:left;line-height:1.7;">
+        🎮 Desktop: กด A/D หรือลูกศรซ้าย-ขวา เพื่อบังคับยาน และกด Space เพื่อยิงเลเซอร์โจมตีตอนสู้บอส<br>
+        📱 มือถือ: ปัดนิ้วซ้าย/ขวาบนหน้าจอเพื่อเลื่อนยาน<br>
+        ☄️ หลบอุกกาบาต — ถ้าชนแล้วต้องตอบคำถามวิทยาศาสตร์ ตอบถูกไม่เสียหัวใจ ตอบผิดเสีย 1 หัวใจ (มีหัวใจสูงสุด 3 ดวง)<br>
+        💎 เก็บ Energy Crystal เพื่อสะสมพลังงาน<br>
+        ⚡ ใช้ Crystal กด BOOST เพื่อเร่งความเร็วยาน — การเดินทางไปดาวถัดไปต้องใช้ BOOST เพิ่มขึ้นทีละดวง<br>
+        🧠 ตอบคำถามวิทยาศาสตร์เมื่อเกิดเหตุการณ์พิเศษ<br>
+        👽 พบเอเลี่ยนประจำดาว ไขปริศนาเพื่อเปิดเส้นทาง — เอเลี่ยนแต่ละตัวปรับตัวตามสภาพของดาวนั้น ๆ<br>
+        🏁 เดินทางให้ครบทุกดาว แล้วเผชิญหน้า COSMIC CHAOS!<br>
+        🔫 ตอนสู้บอส กดปุ่มยิงเลเซอร์เพื่อโจมตี COSMIC CHAOS จนกว่าจะพ่ายแพ้ ก่อนขี่ยานกลับสู่โลก
+      </p>
+      <button class="neon-btn" id="btnBackFromHowTo">⬅ กลับ</button>
+    </div>
+  </div>
+
+  <!-- ============ HIGH SCORE SCREEN ============ -->
+  <div id="hsScreen" class="screen hidden">
+    <div class="glass" style="padding:22px 26px;">
+      <div class="title-glow" style="font-size:26px;">🏆 HIGH SCORES</div>
+      <div id="hsList"></div>
+      <button class="neon-btn" id="btnBackFromHs">⬅ กลับ</button>
+    </div>
+  </div>
+
+  <!-- ============ TRANSITION ============ -->
+  <div id="transitionScreen" class="screen hidden" style="background:#000;">
+    <div style="font-size:54px;" id="transitionEmoji">🚀</div>
+    <div class="subtitle" id="transitionText">พุ่งเข้าสู่อวกาศ...</div>
+  </div>
+
+  <!-- ============ GALACTIC MAP ============ -->
+  <div id="mapScreen" class="screen hidden" style="justify-content:flex-start; padding-top:18px;">
+    <div class="title-glow" style="font-size:clamp(20px,4.5vw,28px);">🗺️ GALACTIC MAP</div>
+    <div class="tagline">แตะดาวเคราะห์ที่ปลดล็อกเพื่อดูข้อมูลระยะทาง แล้วเริ่มเดินทาง</div>
+    <div style="position:relative; width:min(720px,96vw); aspect-ratio:16/9; max-height:46vh;">
+      <canvas id="mapCanvas" style="width:100%;height:100%;display:block;border-radius:16px;"></canvas>
+    </div>
+    <div id="mapInfoPanel" class="glass hidden" style="padding:12px 16px; width:min(600px,92vw); font-size:13px; line-height:1.6;">
+      <div id="mapInfoText" style="text-align:left;"></div>
+      <button class="neon-btn small" id="btnMapTravel" style="margin-top:6px;">🚀 START MISSION</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="neon-btn small" id="btnMapToStart">🏠 START SCREEN</button>
+    </div>
+  </div>
+
+  <!-- ============ MISSION FAILED ============ -->
+  <div id="failScreen" class="screen hidden">
+    <div class="title-glow" style="font-size:30px;color:#ff5b7a;">MISSION FAILED</div>
+    <div class="glass" style="padding:16px 26px;">
+      <div class="stat-row"><span>⭐ Score</span><span id="failScore">0</span></div>
+      <div class="stat-row"><span>🚀 Distance</span><span id="failDist">0</span></div>
+      <div class="stat-row"><span>🧠 Correct</span><span id="failCorrect">0</span></div>
+      <div class="stat-row"><span>💎 Crystals</span><span id="failCrystal">0</span></div>
+    </div>
+    <div>
+      <button class="neon-btn" id="btnRetry">🔄 TRY AGAIN</button>
+      <button class="neon-btn" id="btnFailToMap">🗺️ RETURN TO MAP</button>
+    </div>
+  </div>
+
+  <!-- ============ END / VICTORY SCREEN ============ -->
+  <div id="endScreen" class="screen hidden">
+    <div class="title-glow" style="font-size:clamp(22px,5vw,34px);" id="endTitle">🚀 MISSION COMPLETE!</div>
+    <div class="tagline" id="endSubtitle">YOU SAVED THE SOLAR SYSTEM!</div>
+    <div class="glass" style="padding:16px 26px;">
+      <div class="stat-row"><span>⭐ Score</span><span id="endScore">0</span></div>
+      <div class="stat-row"><span>💎 Crystals</span><span id="endCrystal">0</span></div>
+      <div class="stat-row"><span>❤️ Health</span><span id="endHealth">0</span></div>
+      <div class="stat-row"><span>🧠 Correct</span><span id="endCorrect">0</span></div>
+      <div class="stat-row"><span>❌ Wrong</span><span id="endWrong">0</span></div>
+      <div class="stat-row"><span>🚀 Distance</span><span id="endDist">0</span></div>
+      <div class="stat-row"><span>⏱️ Time</span><span id="endTime">0</span></div>
+      <div class="rank-tag" id="endRank">SCIENCE ROOKIE</div>
+    </div>
+    <div id="saveScoreRow">
+      <div id="nameInputRow">
+        <input type="text" id="nameInput" maxlength="14" placeholder="ชื่อเล่นของเจ้า...">
+        <button class="neon-btn small" id="btnSaveScore">บันทึก</button>
+      </div>
+    </div>
+    <div>
+      <button class="neon-btn" id="btnPlayAgain">🔄 PLAY AGAIN</button>
+      <button class="neon-btn small" id="btnEndMap">🗺️ GALACTIC MAP</button>
+      <button class="neon-btn small" id="btnEndHs">🏆 HIGH SCORE</button>
+    </div>
+  </div>
+
+  <!-- ============ HUD (during gameplay) ============ -->
+  <div id="hud" class="hidden">
+    <div class="glass">
+      <span id="hearts">❤️❤️❤️</span>
+      <span>💎 <span id="crystalCount">00</span></span>
+      <span>⭐ <span id="scoreCount">0</span></span>
+      <span id="planetLabel">🌍 EARTH</span>
+      <span id="speedLabel" class="hidden">⚡ <span id="speedCount">0/0</span></span>
+    </div>
+  </div>
+  <div id="topRightIcons" class="hidden">
+    <button id="pauseBtn">⏸</button>
+    <button id="soundBtn">🔊</button>
+  </div>
+  <div id="bossBar" class="hidden">
+    <div class="label">COSMIC ENERGY</div>
+    <div id="bossHpOuter"><div id="bossHpInner"></div></div>
+  </div>
+
+  <button id="boostBtn" class="hidden disabled">⚡<span id="boostLabel">SPEED</span><span id="boostCost" style="font-size:9px;">-100</span></button>
+  <button id="laserBtn" class="hidden">🔫<span id="laserLabel">FIRE</span></button>
+  <div id="touchControls" class="hidden">
+    <button id="btnLeft">◀</button>
+    <button id="btnRight">▶</button>
+  </div>
+  <div id="swipeHint" class="hidden">👈 ปัดซ้าย / ขวา 👉 เพื่อบังคับยาน</div>
+
+  <!-- pause overlay -->
+  <div id="pauseScreen" class="screen hidden" style="background:rgba(0,0,0,.75); z-index:30;">
+    <div class="title-glow" style="font-size:30px;">⏸ PAUSED</div>
+    <button class="neon-btn" id="btnResume">▶ RESUME</button>
+    <button class="neon-btn small" id="btnQuitToStart">🏠 QUIT TO START</button>
+  </div>
+
+  <!-- dialog panel (question / alien puzzle) -->
+  <div id="dialogPanel" class="glass hidden">
+    <div id="dialogSpeaker"><span class="avatar" id="dialogAvatar">🤖</span><span id="dialogName">NOVA</span></div>
+    <div id="dialogText">...</div>
+    <div id="choices"></div>
+    <div id="dialogFeedback"></div>
+    <button class="neon-btn small hidden" id="dialogContinue">ต่อไป ➜</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   AUDIO ENGINE (Web Audio API — no external files)
+============================================================ */
+const Audio_ = (function(){
+  let ctx=null, enabled=true, engineOsc=null, engineGain=null;
+  function ensure(){ if(!ctx){ ctx = new (window.AudioContext||window.webkitAudioContext)(); } if(ctx.state==='suspended') ctx.resume(); }
+  function tone(freq,dur,type='sine',vol=0.2,glideTo=null){
+    if(!enabled) return; ensure();
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if(glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, ctx.currentTime+dur);
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+dur);
+  }
+  return {
+    setEnabled(v){ enabled=v; if(!v && engineGain) engineGain.gain.value=0; },
+    isEnabled(){ return enabled; },
+    start(){ tone(220,.15,'square',.15); tone(440,.25,'sine',.2,880); },
+    collect(){ tone(880,.12,'sine',.18,1400); },
+    boost(){ tone(120,.3,'sawtooth',.2,600); },
+    laser(){ tone(900,.09,'square',.16,300); },
+    bossHit(){ tone(300,.18,'sawtooth',.2,120); },
+    correct(){ tone(660,.1,'sine',.2,990); setTimeout(()=>tone(990,.15,'sine',.2,1320),90); },
+    wrong(){ tone(200,.25,'sawtooth',.2,80); },
+    crash(){ tone(90,.35,'square',.25,40); },
+    alien(){ tone(500,.2,'sine',.15,700); setTimeout(()=>tone(700,.2,'sine',.15,500),150); },
+    complete(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.3,'sine',.2),i*140)); },
+    engineStart(){
+      if(!enabled) return; ensure();
+      if(engineOsc) return;
+      engineOsc=ctx.createOscillator(); engineGain=ctx.createGain();
+      engineOsc.type='sawtooth'; engineOsc.frequency.value=70;
+      engineGain.gain.value=0.03;
+      engineOsc.connect(engineGain); engineGain.connect(ctx.destination); engineOsc.start();
+    },
+    engineSet(rate){ if(engineOsc) engineOsc.frequency.value = 60+rate*40; },
+    engineStop(){ if(engineOsc){ try{engineOsc.stop();}catch(e){} engineOsc=null; engineGain=null; } }
+  };
+})();
+
+/* ============================================================
+   CANVAS SETUP
+============================================================ */
+const bgCanvas = document.getElementById('bgCanvas');
+const gameCanvas = document.getElementById('gameCanvas');
+const bctx = bgCanvas.getContext('2d');
+const gctx = gameCanvas.getContext('2d');
+const gameContainer = document.getElementById('gameContainer');
+let W=0,H=0, DPR=Math.min(window.devicePixelRatio||1,2);
+// on non-touch devices, show a keyboard/mouse hint instead of the swipe hint
+if(!(('ontouchstart' in window) || navigator.maxTouchPoints>0)){
+  const hintEl = document.getElementById('swipeHint');
+  if(hintEl) hintEl.textContent = '⬅️➡️ A/D หรือลูกศร บังคับยาน • คลิกซ้าย/ขวาก็ได้ • Space ยิงเลเซอร์';
+}
+function resize(){
+  W=gameContainer.clientWidth; H=gameContainer.clientHeight;
+  [bgCanvas,gameCanvas].forEach(c=>{
+    c.width=W*DPR; c.height=H*DPR; c.style.width=W+'px'; c.style.height=H+'px';
+  });
+  bctx.setTransform(DPR,0,0,DPR,0,0);
+  gctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ============================================================
+   DESKTOP / MOUSE SUPPORT
+============================================================ */
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
+
+/* ============================================================
+   STARFIELD / PARALLAX BACKGROUND
+============================================================ */
+let stars=[], nebulae=[], farPlanets=[];
+function initBackground(){
+  stars=[]; nebulae=[]; farPlanets=[];
+  for(let i=0;i<140;i++){
+    stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.3,speed:Math.random()*1.2+.3,tw:Math.random()*Math.PI*2});
+  }
+  for(let i=0;i<3;i++){
+    nebulae.push({x:Math.random()*W,y:Math.random()*H*.6,r:150+Math.random()*160,hue:220+Math.random()*100,speed:.15+Math.random()*.15});
+  }
+}
+initBackground();
+
+function drawBackground(dt, speedMult, theme){
+  bctx.clearRect(0,0,W,H);
+  const grad=bctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, theme.sky1); grad.addColorStop(1, theme.sky2);
+  bctx.fillStyle=grad; bctx.fillRect(0,0,W,H);
+
+  nebulae.forEach(n=>{
+    n.y += n.speed*speedMult*dt*40;
+    if(n.y-n.r>H){ n.y=-n.r; n.x=Math.random()*W; }
+    const g=bctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r);
+    g.addColorStop(0, `hsla(${n.hue},80%,60%,.18)`);
+    g.addColorStop(1, `hsla(${n.hue},80%,60%,0)`);
+    bctx.fillStyle=g; bctx.beginPath(); bctx.arc(n.x,n.y,n.r,0,7); bctx.fill();
+  });
+
+  stars.forEach(s=>{
+    s.y += s.speed*speedMult*dt*60;
+    if(s.y>H){ s.y=0; s.x=Math.random()*W; }
+    s.tw+=dt*3;
+    const alpha = 0.5+Math.sin(s.tw)*0.4;
+    bctx.fillStyle=`rgba(255,255,255,${Math.max(0.1,alpha)})`;
+    bctx.beginPath(); bctx.arc(s.x,s.y,s.r,0,7); bctx.fill();
+  });
+}
+
+/* ============================================================
+   PLANET / LEVEL DATA
+============================================================ */
+const PLANETS = [
+  { id:'earth', name:'EARTH', emoji:'🌍', color:'#4bd8ff',
+    sky1:'#0b1442', sky2:'#04061a', obstacleRate:1.0, obstacleSpeed:1.0,
+    auDist:1.00, lightMin:8.3, speedNeeded:0,
+    alien:null,
+    questions:[
+      {q:'ดาวเคราะห์ในระบบสุริยะโคจรรอบสิ่งใด?', a:['ดวงจันทร์','ดวงอาทิตย์','โลก','ดาวอังคาร'], correct:1, exp:'ดาวเคราะห์ทุกดวงโคจรรอบดวงอาทิตย์ด้วยแรงโน้มถ่วง'},
+      {q:'ดวงจันทร์โคจรรอบสิ่งใด?', a:['ดวงอาทิตย์','โลก','ดาวศุกร์','ดาวอังคาร'], correct:1, exp:'ดวงจันทร์เป็นบริวารตามธรรมชาติของโลก'},
+      {q:'โลกหมุนรอบตัวเองครบ 1 รอบใช้เวลาเท่าใด?', a:['1 ปี','1 เดือน','24 ชั่วโมง','1 สัปดาห์'], correct:2, exp:'การหมุนรอบตัวเอง 24 ชม. ทำให้เกิดกลางวัน-กลางคืน'},
+      {q:'โลกโคจรรอบดวงอาทิตย์ครบ 1 รอบใช้เวลาเท่าใด?', a:['1 เดือน','1 ปี','10 ปี','1 สัปดาห์'], correct:1, exp:'โลกใช้เวลาประมาณ 365 วันในการโคจรรอบดวงอาทิตย์ครบ 1 รอบ'},
+      {q:'ชั้นบรรยากาศของโลกมีก๊าซชนิดใดมากที่สุด?', a:['ออกซิเจน','คาร์บอนไดออกไซด์','ไนโตรเจน','ไฮโดรเจน'], correct:2, exp:'บรรยากาศโลกประกอบด้วยไนโตรเจนราว 78% มากกว่าออกซิเจน'},
+      {q:'เหตุใดโลกจึงเกิดฤดูกาลต่าง ๆ?', a:['ระยะห่างจากดวงอาทิตย์เปลี่ยนทุกวัน','แกนโลกเอียงขณะโคจรรอบดวงอาทิตย์','ดวงจันทร์บังแสงอาทิตย์','โลกหยุดหมุน'], correct:1, exp:'แกนโลกเอียงราว 23.5 องศา ทำให้แต่ละซีกโลกได้รับแสงอาทิตย์ไม่เท่ากันตลอดปี'},
+      {q:'โลกเป็นดาวเคราะห์ลำดับที่เท่าใดนับจากดวงอาทิตย์?', a:['2','3','4','5'], correct:1, exp:'โลกอยู่ห่างจากดวงอาทิตย์เป็นลำดับที่ 3 รองจากดาวพุธและดาวศุกร์'},
+      {q:'พื้นผิวโลกส่วนใหญ่ปกคลุมด้วยสิ่งใด?', a:['ทะเลทราย','น้ำ','น้ำแข็ง','ป่าไม้'], correct:1, exp:'ประมาณ 71% ของพื้นผิวโลกปกคลุมด้วยน้ำ ส่วนใหญ่เป็นมหาสมุทร'},
+      {q:'เปลือกโลกแบ่งออกเป็นแผ่นขนาดใหญ่ที่เคลื่อนที่ได้ช้า ๆ เรียกว่าอะไร?', a:['แผ่นเปลือกโลก (Tectonic Plates)','แผ่นน้ำแข็งขั้วโลก','แผ่นแม่เหล็ก','แผ่นบรรยากาศ'], correct:0, exp:'เปลือกโลกประกอบด้วยแผ่นเปลือกโลกหลายแผ่นที่เคลื่อนที่อยู่ตลอดเวลาอย่างช้า ๆ ทำให้เกิดแผ่นดินไหวและภูเขาไฟ'},
+      {q:'สนามแม่เหล็กโลกเกิดขึ้นจากสิ่งใด?', a:['แสงอาทิตย์','การเคลื่อนที่ของแกนเหล็กเหลวชั้นนอก','ชั้นโอโซน','การหมุนของดวงจันทร์'], correct:1, exp:'การเคลื่อนที่ของโลหะเหลวในแกนโลกชั้นนอกก่อให้เกิดกระแสไฟฟ้าและสนามแม่เหล็กโลก'},
+      {q:'โลกมีอายุโดยประมาณเท่าใด?', a:['4,600 ล้านปี','1,000 ล้านปี','100 ล้านปี','10,000 ปี'], correct:0, exp:'จากการหาอายุด้วยวิธีทางธรณีวิทยา โลกมีอายุประมาณ 4,600 ล้านปี'},
+      {q:'ชั้นโอโซนในบรรยากาศโลกทำหน้าที่ใด?', a:['กักเก็บน้ำฝน','ดูดกลืนรังสีอัลตราไวโอเลตจากดวงอาทิตย์','ทำให้เกิดลม','สร้างออกซิเจน'], correct:1, exp:'ชั้นโอโซนช่วยดูดกลืนรังสีอัลตราไวโอเลต (UV) ที่เป็นอันตรายจากดวงอาทิตย์ ปกป้องสิ่งมีชีวิตบนโลก'},
+      {q:'จุดที่ลึกที่สุดในมหาสมุทรของโลกมีชื่อว่าอะไร?', a:['ร่องลึกมาเรียนา','อ่าวเบงกอล','ทะเลแดง','ช่องแคบยิบรอลตาร์'], correct:0, exp:'ร่องลึกมาเรียนาในมหาสมุทรแปซิฟิกเป็นจุดที่ลึกที่สุดในโลก ลึกกว่า 10,900 เมตร'},
+      {q:'ภูเขาที่สูงที่สุดในโลกเมื่อวัดจากระดับน้ำทะเลคือภูเขาใด?', a:['ภูเขาไฟฟูจิ','เอเวอเรสต์','คิลิมันจาโร','อัลไพน์'], correct:1, exp:'ยอดเขาเอเวอเรสต์สูงประมาณ 8,849 เมตรจากระดับน้ำทะเล ถือเป็นภูเขาที่สูงที่สุดในโลก'},
+      {q:'ปรากฏการณ์เรือนกระจกที่ทำให้โลกอุ่นขึ้นเกิดจากก๊าซชนิดใดเป็นหลัก?', a:['ออกซิเจน','ไนโตรเจน','คาร์บอนไดออกไซด์','ฮีเลียม'], correct:2, exp:'คาร์บอนไดออกไซด์และก๊าซเรือนกระจกอื่น ๆ กักเก็บความร้อนไว้ในบรรยากาศ ทำให้อุณหภูมิโลกสูงขึ้น'},
+      {q:'เหตุใดท้องฟ้าในเวลากลางวันจึงมองเห็นเป็นสีฟ้า?', a:['ดวงอาทิตย์ปล่อยแสงสีฟ้าเท่านั้น','โมเลกุลอากาศกระเจิงแสงสีฟ้ามากกว่าสีอื่น','มหาสมุทรสะท้อนสีขึ้นไปบนฟ้า','ชั้นโอโซนมีสีฟ้า'], correct:1, exp:'โมเลกุลอากาศกระเจิง (scatter) แสงความยาวคลื่นสั้นอย่างสีฟ้าได้มากกว่าแสงสีอื่น ทำให้ท้องฟ้าดูเป็นสีฟ้า'},
+      {q:'น้ำจืดบนโลกคิดเป็นสัดส่วนประมาณเท่าใดของน้ำทั้งหมด?', a:['ประมาณ 3%','ประมาณ 50%','ประมาณ 25%','ประมาณ 90%'], correct:0, exp:'น้ำส่วนใหญ่บนโลกเป็นน้ำเค็มในมหาสมุทร มีน้ำจืดเพียงประมาณ 3% เท่านั้น'},
+      {q:'โลกมีทวีปทั้งหมดกี่ทวีป?', a:['5','6','7','8'], correct:2, exp:'โลกแบ่งออกเป็น 7 ทวีป ได้แก่ เอเชีย แอฟริกา อเมริกาเหนือ อเมริกาใต้ แอนตาร์กติกา ยุโรป และออสเตรเลีย'},
+      {q:'โลกโคจรรอบดวงอาทิตย์ด้วยความเร็วโดยประมาณเท่าใด?', a:['30 กิโลเมตรต่อวินาที','300 กิโลเมตรต่อวินาที','3 กิโลเมตรต่อวินาที','30 กิโลเมตรต่อชั่วโมง'], correct:0, exp:'โลกเคลื่อนที่รอบดวงอาทิตย์ด้วยความเร็วเฉลี่ยประมาณ 30 กิโลเมตรต่อวินาที'},
+      {q:'ปรากฏการณ์น้ำขึ้นน้ำลงบนโลกเกิดจากแรงดึงดูดของสิ่งใดเป็นหลัก?', a:['ดวงอาทิตย์เพียงอย่างเดียว','ดวงจันทร์ (ร่วมกับดวงอาทิตย์)','ลมมรสุม','แกนโลกเอียง'], correct:1, exp:'แรงโน้มถ่วงของดวงจันทร์เป็นปัจจัยหลักที่ทำให้เกิดน้ำขึ้นน้ำลง โดยมีแรงจากดวงอาทิตย์ช่วยเสริม'}
+    ]},
+  { id:'mars', name:'MARS', emoji:'🔴', color:'#ff6b4b',
+    sky1:'#3a1208', sky2:'#12040a', obstacleRate:1.25, obstacleSpeed:1.15,
+    auDist:0.52, lightMin:4.3, speedNeeded:3,
+    alien:{name:'MARZI', emoji:'🔴', color:'#ff6b4b',
+      desc:'MARZI วิวัฒนาการผิวสีแดงอมส้มและดวงตาพิเศษเพื่อทนต่อฝุ่นและความแห้งแล้งของดาวอังคาร',
+      puzzle:{q:'ดาวอังคารมีบรรยากาศหนาแน่นเท่าโลกหรือไม่?', a:['หนาแน่นกว่าโลกมาก','บาง เบามาก เมื่อเทียบกับโลก','ไม่มีบรรยากาศเลย','หนาแน่นพอ ๆ กับโลก'], correct:1, exp:'บรรยากาศของดาวอังคารเบาบางกว่าโลกมาก ส่วนใหญ่เป็นคาร์บอนไดออกไซด์'}},
+    questions:[
+      {q:'สีแดงของดาวอังคารเกิดจากอะไร?', a:['น้ำแข็ง','ออกไซด์ของเหล็ก (สนิม)','พืชสีแดง','ก๊าซมีเทน'], correct:1, exp:'พื้นผิวดาวอังคารมีสนิมเหล็กปกคลุมทำให้มีสีแดง'},
+      {q:'ดาวอังคารมีดวงจันทร์กี่ดวง?', a:['0','1','2','4'], correct:2, exp:'ดาวอังคารมีดวงจันทร์ 2 ดวง คือ โฟบอสและไดมอส'},
+      {q:'ภูเขาไฟที่สูงที่สุดในระบบสุริยะอยู่บนดาวใด?', a:['โลก','ดาวศุกร์','ดาวอังคาร','ดาวพฤหัส'], correct:2, exp:'ภูเขาไฟโอลิมปัส มอนส์ บนดาวอังคารสูงที่สุดในระบบสุริยะ'},
+      {q:'ดาวอังคารโคจรรอบดวงอาทิตย์ครบ 1 รอบใช้เวลาประมาณเท่าใด?', a:['365 วัน','687 วัน','12 ปี','29 ปี'], correct:1, exp:'ดาวอังคารอยู่ไกลดวงอาทิตย์กว่าโลก จึงใช้เวลาโคจรครบ 1 รอบราว 687 วันโลก'},
+      {q:'นักวิทยาศาสตร์เชื่อว่าดาวอังคารในอดีตเคยมีสิ่งใดอยู่บนพื้นผิว?', a:['ป่าไม้หนาแน่น','น้ำในสภาพของเหลว','เมืองโบราณ','มหาสมุทรลาวา'], correct:1, exp:'ร่องรอยทางธรณีวิทยาบ่งชี้ว่าดาวอังคารเคยมีน้ำเหลวไหลอยู่บนพื้นผิวเมื่อหลายพันล้านปีก่อน'},
+      {q:'หุบเขา Valles Marineris ซึ่งใหญ่ที่สุดในระบบสุริยะ อยู่บนดาวเคราะห์ดวงใด?', a:['โลก','ดาวศุกร์','ดาวอังคาร','ดาวพุธ'], correct:2, exp:'Valles Marineris บนดาวอังคารมีความยาวกว่า 4,000 กิโลเมตร'},
+      {q:'อุณหภูมิเฉลี่ยบนพื้นผิวดาวอังคารเป็นอย่างไรเมื่อเทียบกับโลก?', a:['ร้อนกว่าโลกมาก','ใกล้เคียงโลกมาก','หนาวเย็นกว่าโลกมาก','ไม่มีอุณหภูมิที่วัดได้'], correct:2, exp:'ดาวอังคารอยู่ไกลดวงอาทิตย์กว่าและมีบรรยากาศเบาบาง จึงหนาวเย็นกว่าโลกมาก'},
+      {q:'ยานสำรวจอย่าง Perseverance ถูกส่งไปดาวอังคารเพื่อจุดประสงค์หลักใด?', a:['ขุดเหมืองแร่','ค้นหาร่องรอยสิ่งมีชีวิตในอดีต','สร้างเมืองถาวร','ถ่ายภาพดวงจันทร์'], correct:1, exp:'ภารกิจหลักของยานสำรวจดาวอังคารคือค้นหาหลักฐานของสิ่งมีชีวิตในอดีตและศึกษาธรณีวิทยา'},
+      {q:'ดาวอังคารอยู่ห่างจากดวงอาทิตย์เป็นลำดับที่เท่าใด?', a:['2','3','4','5'], correct:2, exp:'ดาวอังคารเป็นดาวเคราะห์ลำดับที่ 4 จากดวงอาทิตย์ ถัดจากโลก'},
+      {q:'ดาวอังคารมีขนาดเป็นอย่างไรเมื่อเทียบกับโลก?', a:['ใหญ่กว่าโลกมาก','เล็กกว่าโลกประมาณครึ่งหนึ่ง','มีขนาดเท่ากับโลกพอดี','ใหญ่กว่าดาวพฤหัส'], correct:1, exp:'ดาวอังคารมีเส้นผ่านศูนย์กลางประมาณครึ่งหนึ่งของโลก'},
+      {q:'ดาวอังคารจัดเป็นดาวเคราะห์ประเภทใด?', a:['ดาวเคราะห์ก๊าซ','ดาวเคราะห์หิน','ดาวเคราะห์น้ำแข็ง','ดาวเคราะห์แคระ'], correct:1, exp:'ดาวอังคารเป็นดาวเคราะห์หินเช่นเดียวกับโลก มีพื้นผิวแข็งเป็นหิน'},
+      {q:'พายุฝุ่นบนดาวอังคารมีลักษณะพิเศษอย่างไร?', a:['ไม่เคยเกิดขึ้นเลย','บางครั้งปกคลุมทั่วทั้งดาวได้นานหลายเดือน','เกิดเฉพาะที่ขั้วดาวเท่านั้น','เกิดขึ้นทุก 1 ชั่วโมง'], correct:1, exp:'พายุฝุ่นบนดาวอังคารบางครั้งขยายตัวจนปกคลุมทั่วทั้งดาว และอาจกินเวลานานหลายสัปดาห์ถึงหลายเดือน'},
+      {q:'อุณหภูมิเฉลี่ยที่ขั้วของดาวอังคารเป็นอย่างไร?', a:['ร้อนกว่าเส้นศูนย์สูตรมาก','หนาวเย็นจนมีน้ำแข็งแห้ง (คาร์บอนไดออกไซด์แข็ง) ปกคลุม','ไม่มีน้ำแข็งเลย','ร้อนพอ ๆ กับดาวศุกร์'], correct:1, exp:'ขั้วของดาวอังคารมีชั้นน้ำแข็งของน้ำและคาร์บอนไดออกไซด์แข็ง (น้ำแข็งแห้ง) ปกคลุมอยู่'},
+      {q:'ดาวอังคารหมุนรอบตัวเองใช้เวลาประมาณเท่าใด?', a:['ประมาณ 10 ชั่วโมง','ประมาณ 24.6 ชั่วโมง ใกล้เคียงโลก','ประมาณ 48 ชั่วโมง','ประมาณ 1 สัปดาห์'], correct:1, exp:'ดาวอังคารหมุนรอบตัวเองใช้เวลาประมาณ 24 ชั่วโมง 37 นาที ใกล้เคียงกับโลกมาก'},
+      {q:'ยานอวกาศลำแรกที่ลงจอดบนดาวอังคารได้สำเร็จคือยานใด?', a:['ไวกิ้ง 1 (Viking 1)','อพอลโล 11','วอยเอเจอร์ 1','สปุตนิก 1'], correct:0, exp:'ยานไวกิ้ง 1 ขององค์การนาซาลงจอดบนพื้นผิวดาวอังคารได้สำเร็จเป็นครั้งแรกในปี ค.ศ. 1976'},
+      {q:'สีของท้องฟ้าบนดาวอังคารในเวลากลางวันมีลักษณะอย่างไร?', a:['ฟ้าสดใสเหมือนโลก','น้ำตาลอมส้มจากฝุ่นในบรรยากาศ','เขียวเข้ม','ดำสนิทตลอดเวลา'], correct:1, exp:'ฝุ่นละเอียดที่ลอยอยู่ในบรรยากาศเบาบางของดาวอังคารทำให้ท้องฟ้ามีสีน้ำตาลอมส้ม'},
+      {q:'ดาวอังคารมีชั้นบรรยากาศประกอบด้วยก๊าซใดเป็นส่วนใหญ่?', a:['ไนโตรเจน','ออกซิเจน','คาร์บอนไดออกไซด์','ฮีเลียม'], correct:2, exp:'บรรยากาศของดาวอังคารประกอบด้วยคาร์บอนไดออกไซด์เป็นส่วนใหญ่ประมาณ 95%'},
+      {q:'หลักฐานที่พบบนดาวอังคารบ่งชี้ถึงสิ่งใดในอดีต?', a:['ทะเลลาวาที่ยังคุกรุ่น','ร่องน้ำและตะกอนที่บ่งชี้ว่าเคยมีน้ำไหล','เมืองโบราณของมนุษย์ต่างดาว','ป่าไม้เขตร้อน'], correct:1, exp:'ภาพถ่ายจากยานสำรวจพบร่องรอยของแม่น้ำโบราณและตะกอนดินที่บ่งชี้ว่าดาวอังคารเคยมีน้ำไหลอยู่บนพื้นผิว'},
+      {q:'เพราะเหตุใดดาวอังคารจึงไม่สามารถกักเก็บบรรยากาศหนาแน่นไว้ได้เหมือนโลก?', a:['อยู่ใกล้ดวงอาทิตย์เกินไป','ไม่มีสนามแม่เหล็กปกป้องบรรยากาศจากลมสุริยะ','หมุนรอบตัวเองเร็วเกินไป','มีดวงจันทร์มากเกินไป'], correct:1, exp:'ดาวอังคารไม่มีสนามแม่เหล็กที่แข็งแรงพอจะปกป้องบรรยากาศจากลมสุริยะ ทำให้บรรยากาศค่อย ๆ ถูกพัดหายไปตามกาลเวลา'},
+      {q:'ดวงจันทร์โฟบอสของดาวอังคารมีชะตากรรมในอนาคตอย่างไรตามการคำนวณของนักวิทยาศาสตร์?', a:['จะโคจรออกห่างจากดาวอังคารไปเรื่อย ๆ','จะเข้าใกล้ดาวอังคารขึ้นเรื่อย ๆ จนแตกสลายหรือพุ่งชน','จะกลายเป็นวงแหวนถาวรตลอดไป','จะไม่มีการเปลี่ยนแปลงใด ๆ'], correct:1, exp:'โฟบอสกำลังโคจรเข้าใกล้ดาวอังคารมากขึ้นเรื่อย ๆ นักวิทยาศาสตร์คาดว่าในอนาคตอาจแตกสลายเป็นวงแหวนหรือพุ่งชนดาวอังคาร'}
+    ]},
+  { id:'jupiter', name:'JUPITER', emoji:'🟠', color:'#ffb84b',
+    sky1:'#3a2408', sky2:'#100a02', obstacleRate:1.5, obstacleSpeed:1.3,
+    auDist:4.20, lightMin:34.9, speedNeeded:4,
+    alien:{name:'JOVI', emoji:'⚡', color:'#ffcf6b',
+      desc:'JOVI เป็นสิ่งมีชีวิตพลังงานก๊าซที่ลอยตัวได้ในชั้นบรรยากาศหนาของดาวเคราะห์ก๊าซยักษ์',
+      puzzle:{q:'หากเจ้าต้องเดินทางผ่านดาวเคราะห์ที่มีแรงโน้มถ่วงสูง เจ้าควรทำอย่างไร?', a:['ปิดเครื่องยนต์','เร่งพลังงานยานให้เสถียร','บินเข้าใกล้พื้นผิว','ลอยเฉย ๆ'], correct:1, exp:'ต้องเพิ่มพลังงานยานเพื่อรักษาเสถียรภาพเมื่อเจอแรงโน้มถ่วงสูง'}},
+    questions:[
+      {q:'ดาวพฤหัสบดีเป็นดาวเคราะห์ประเภทใด?', a:['ดาวเคราะห์หิน','ดาวเคราะห์ก๊าซ','ดาวเคราะห์น้ำแข็ง','ดาวเคราะห์แคระ'], correct:1, exp:'ดาวพฤหัสเป็นดาวเคราะห์ก๊าซยักษ์ ประกอบด้วยไฮโดรเจนและฮีเลียมเป็นหลัก'},
+      {q:'จุดแดงใหญ่ (Great Red Spot) บนดาวพฤหัสคืออะไร?', a:['ภูเขาไฟ','พายุหมุนยักษ์','ทะเลลาวา','หลุมอุกกาบาต'], correct:1, exp:'จุดแดงใหญ่คือพายุหมุนขนาดใหญ่กว่าโลกที่พัดต่อเนื่องมานานหลายร้อยปี'},
+      {q:'ดาวพฤหัสมีบทบาทสำคัญด้านแรงโน้มถ่วงต่อระบบสุริยะอย่างไร?', a:['ไม่มีผลใด ๆ','ดึงดูดอุกกาบาตออกจากเส้นทางโลก','ทำให้ดวงอาทิตย์ร้อนขึ้น','ดันโลกออกจากวงโคจร'], correct:1, exp:'แรงโน้มถ่วงมหาศาลของดาวพฤหัสช่วยเบี่ยงเบนอุกกาบาตหลายลูกออกจากโลก'},
+      {q:'ดาวพฤหัสบดีมีขนาดเป็นอย่างไรเมื่อเทียบกับดาวเคราะห์ดวงอื่นในระบบสุริยะ?', a:['เล็กที่สุด','มีขนาดปานกลาง','ใหญ่ที่สุด','เท่ากับโลกพอดี'], correct:2, exp:'ดาวพฤหัสบดีเป็นดาวเคราะห์ที่มีขนาดใหญ่ที่สุดในระบบสุริยะ'},
+      {q:'ดาวพฤหัสบดีมีดวงจันทร์บริวารประมาณกี่ดวง?', a:['ไม่มีเลย','ประมาณ 5 ดวง','มากกว่า 90 ดวง','2 ดวง'], correct:2, exp:'ปัจจุบันนักดาราศาสตร์ค้นพบดวงจันทร์บริวารของดาวพฤหัสแล้วมากกว่า 90 ดวง'},
+      {q:'ดวงจันทร์กาลิเลียนทั้ง 4 ดวงของดาวพฤหัสถูกค้นพบโดยใคร?', a:['ไอแซก นิวตัน','กาลิเลโอ กาลิเลอี','นิโคลัส โคเปอร์นิคัส','โยฮันเนส เคปเลอร์'], correct:1, exp:'กาลิเลโอ กาลิเลอี ค้นพบดวงจันทร์ 4 ดวงนี้ผ่านกล้องโทรทรรศน์ในปี ค.ศ. 1610'},
+      {q:'ดาวพฤหัสหมุนรอบตัวเองใช้เวลาเท่าใดต่อ 1 รอบ?', a:['24 ชั่วโมง','ประมาณ 10 ชั่วโมง','1 สัปดาห์','1 เดือน'], correct:1, exp:'ดาวพฤหัสหมุนรอบตัวเองเร็วมาก ใช้เวลาเพียงประมาณ 10 ชั่วโมงต่อรอบ'},
+      {q:'องค์ประกอบหลักของดาวพฤหัสบดีคือธาตุใด?', a:['เหล็ก','ไฮโดรเจน','ออกซิเจน','คาร์บอน'], correct:1, exp:'ดาวพฤหัสประกอบด้วยไฮโดรเจนเป็นส่วนใหญ่ คล้ายองค์ประกอบของดวงอาทิตย์'},
+      {q:'ดาวพฤหัสบดีอยู่ห่างจากดวงอาทิตย์เป็นลำดับที่เท่าใด?', a:['4','5','6','7'], correct:1, exp:'ดาวพฤหัสบดีเป็นดาวเคราะห์ลำดับที่ 5 จากดวงอาทิตย์'},
+      {q:'ดวงจันทร์กาลิเลียนทั้ง 4 ดวงของดาวพฤหัสมีชื่อว่าอะไรบ้าง?', a:['ไททัน ไทรทัน ไดโอนี รีอา','ไอโอ ยูโรปา แกนีมีด คัลลิสโต','โฟบอส ไดมอส ลูนา ชารอน','มิแรนดา เอเรียล อัมเบรียล ไททาเนีย'], correct:1, exp:'ดวงจันทร์กาลิเลียนทั้ง 4 ดวงของดาวพฤหัส คือ ไอโอ ยูโรปา แกนีมีด และคัลลิสโต'},
+      {q:'แกนีมีด (Ganymede) ดวงจันทร์ของดาวพฤหัส มีลักษณะพิเศษอย่างไร?', a:['เป็นดวงจันทร์ที่ใหญ่ที่สุดในระบบสุริยะ','เป็นดวงจันทร์ที่เล็กที่สุด','มีภูเขาไฟลาวาปะทุตลอดเวลา','ไม่มีน้ำแข็งเลย'], correct:0, exp:'แกนีมีดเป็นดวงจันทร์ที่ใหญ่ที่สุดในระบบสุริยะ ใหญ่กว่าดาวพุธเสียอีก'},
+      {q:'ยูโรปา (Europa) ดวงจันทร์ของดาวพฤหัส เป็นที่สนใจของนักวิทยาศาสตร์เพราะเหตุใด?', a:['มีภูเขาไฟมากที่สุด','เชื่อว่ามีมหาสมุทรน้ำเหลวอยู่ใต้เปลือกน้ำแข็ง','มีบรรยากาศหนาแน่นที่สุด','ร้อนที่สุดในระบบสุริยะ'], correct:1, exp:'ยูโรปามีเปลือกน้ำแข็งปกคลุม และเชื่อว่ามีมหาสมุทรน้ำเหลวอยู่ใต้พื้นผิว ทำให้เป็นเป้าหมายค้นหาสิ่งมีชีวิต'},
+      {q:'ดาวพฤหัสบดีมีวงแหวนหรือไม่?', a:['ไม่มีเลย','มี แต่จางมากจนมองแทบไม่เห็น','มีและสว่างที่สุดในระบบสุริยะ','มีเฉพาะฤดูหนาว'], correct:1, exp:'ดาวพฤหัสบดีมีวงแหวนบาง ๆ ที่จางมาก ประกอบด้วยฝุ่นละเอียด ต่างจากวงแหวนสว่างของดาวเสาร์'},
+      {q:'สนามแม่เหล็กของดาวพฤหัสบดีเมื่อเทียบกับโลกเป็นอย่างไร?', a:['อ่อนกว่าโลกมาก','แรงกว่าโลกหลายเท่าและใหญ่ที่สุดในระบบสุริยะ','ไม่มีสนามแม่เหล็กเลย','เท่ากับโลกพอดี'], correct:1, exp:'ดาวพฤหัสบดีมีสนามแม่เหล็กที่แรงที่สุดในบรรดาดาวเคราะห์ในระบบสุริยะ'},
+      {q:'ดาวพฤหัสบดีใช้เวลาโคจรรอบดวงอาทิตย์ครบ 1 รอบประมาณกี่ปีโลก?', a:['1 ปี','5 ปี','12 ปี','29 ปี'], correct:2, exp:'ดาวพฤหัสบดีใช้เวลาโคจรรอบดวงอาทิตย์ครบ 1 รอบประมาณ 12 ปีโลก'},
+      {q:'ยานอวกาศลำใดที่ศึกษาดาวพฤหัสบดีและดวงจันทร์บริวารอย่างละเอียดในภารกิจที่ชื่อ Juno?', a:['องค์การนาซา (NASA)','องค์การอวกาศยุโรป (ESA)','องค์การอวกาศญี่ปุ่น (JAXA)','องค์การอวกาศรัสเซีย'], correct:0, exp:'ยาน Juno ขององค์การนาซาโคจรรอบดาวพฤหัสบดีเพื่อศึกษาโครงสร้างภายในและสนามแม่เหล็ก'},
+      {q:'จุดแดงใหญ่บนดาวพฤหัสบดีมีขนาดใหญ่เพียงใด?', a:['เล็กกว่าดวงจันทร์ของโลก','ใหญ่กว่าโลกทั้งดวง','เท่ากับประเทศไทยพอดี','เล็กเกินกว่าจะมองเห็นได้'], correct:1, exp:'จุดแดงใหญ่เป็นพายุหมุนขนาดใหญ่ที่มีเส้นผ่านศูนย์กลางใหญ่กว่าโลกทั้งดวง'},
+      {q:'ดาวพฤหัสบดีถือเป็น "เกราะป้องกัน" ของระบบสุริยะชั้นในเพราะเหตุใด?', a:['ปล่อยแสงสว่างช่วยส่องทาง','แรงโน้มถ่วงมหาศาลช่วยดึงดูดหรือเบี่ยงเบนวัตถุอวกาศ','มีบรรยากาศหนาช่วยกรองรังสี','อยู่ใกล้โลกที่สุด'], correct:1, exp:'แรงโน้มถ่วงมหาศาลของดาวพฤหัสบดีช่วยดึงดูดหรือเบี่ยงเบนดาวเคราะห์น้อยและดาวหางจำนวนมากไม่ให้เข้าใกล้โลก'},
+      {q:'ดาวพฤหัสบดีปล่อยพลังงานความร้อนออกมาเองหรือไม่?', a:['ไม่มีเลย','มี มากกว่าพลังงานที่ได้รับจากดวงอาทิตย์','มีเท่ากับที่ได้รับจากดวงอาทิตย์พอดี','ปล่อยเฉพาะเวลากลางคืน'], correct:1, exp:'ดาวพฤหัสบดีปล่อยพลังงานความร้อนออกมามากกว่าที่ได้รับจากดวงอาทิตย์ เนื่องจากพลังงานที่หลงเหลือจากการก่อตัวของดาว'},
+      {q:'ดาวพฤหัสบดีมีขนาดใหญ่เพียงใดเมื่อเทียบกับดาวเคราะห์ดวงอื่นรวมกัน?', a:['เล็กกว่าดาวเคราะห์ดวงอื่นรวมกัน','มีมวลมากกว่าดาวเคราะห์ดวงอื่นทั้งหมดในระบบสุริยะรวมกัน','เท่ากับโลกและดาวอังคารรวมกัน','เล็กกว่าดวงจันทร์ของโลก'], correct:1, exp:'ดาวพฤหัสบดีมีมวลมากกว่าดาวเคราะห์ดวงอื่นทั้งหมดในระบบสุริยะรวมกันถึงสองเท่า'}
+    ]},
+  { id:'saturn', name:'SATURN', emoji:'💍', color:'#ffe08a',
+    sky1:'#2a2008', sky2:'#0c0a02', obstacleRate:1.7, obstacleSpeed:1.4,
+    auDist:8.58, lightMin:71.4, speedNeeded:5,
+    alien:{name:'RINGA', emoji:'💎', color:'#c9f3ff',
+      desc:'RINGA มีร่างโปร่งแสงและใช้ผลึกน้ำแข็งรอบตัวเป็นแหล่งพลังงาน เหมาะกับสภาพแวดล้อมวงแหวนน้ำแข็ง',
+      puzzle:{q:'วงแหวนของดาวเสาร์ประกอบด้วยอะไรเป็นหลัก?', a:['หิน','น้ำแข็งและเศษหิน','ก๊าซพิษ','โลหะเหลว'], correct:1, exp:'วงแหวนดาวเสาร์ประกอบด้วยอนุภาคน้ำแข็งและเศษหินขนาดต่าง ๆ'}},
+    questions:[
+      {q:'ดาวเคราะห์ดวงใดมีวงแหวนใหญ่ที่สุดในระบบสุริยะ?', a:['ดาวยูเรนัส','ดาวเสาร์','ดาวพฤหัส','ดาวเนปจูน'], correct:1, exp:'ดาวเสาร์มีระบบวงแหวนที่ใหญ่และสว่างที่สุด'},
+      {q:'ดาวเสาร์มีความหนาแน่นเป็นอย่างไรเมื่อเทียบกับน้ำ?', a:['หนาแน่นกว่าน้ำมาก','น้อยกว่าน้ำ (ลอยน้ำได้)','เท่ากับน้ำพอดี','ไม่มีความหนาแน่น'], correct:1, exp:'ดาวเสาร์มีความหนาแน่นต่ำกว่าน้ำ ตามทฤษฎีจะลอยน้ำได้หากมีอ่างใหญ่พอ'},
+      {q:'ดาวเสาร์เป็นดาวเคราะห์ประเภทใด?', a:['ดาวเคราะห์หิน','ดาวเคราะห์ก๊าซ','ดาวเคราะห์แคระ','ดาวหาง'], correct:1, exp:'ดาวเสาร์เป็นดาวเคราะห์ก๊าซยักษ์เช่นเดียวกับดาวพฤหัส'},
+      {q:'ดวงจันทร์บริวารที่ใหญ่ที่สุดของดาวเสาร์มีชื่อว่าอะไร?', a:['ไทรทัน','ไททัน','ยูโรปา','แกนีมีด'], correct:1, exp:'ไททัน (Titan) เป็นดวงจันทร์ที่ใหญ่ที่สุดของดาวเสาร์ และใหญ่เป็นอันดับสองของระบบสุริยะ'},
+      {q:'ดาวเสาร์อยู่ห่างจากดวงอาทิตย์เป็นลำดับที่เท่าใด?', a:['5','6','7','8'], correct:1, exp:'ดาวเสาร์เป็นดาวเคราะห์ลำดับที่ 6 จากดวงอาทิตย์'},
+      {q:'วงแหวนของดาวเสาร์มีลักษณะความหนาเป็นอย่างไรเมื่อเทียบกับความกว้าง?', a:['หนามาก เกือบเป็นทรงกลม','บางมากเมื่อเทียบกับความกว้าง','หนาเท่ากับความกว้าง','ไม่มีความหนา'], correct:1, exp:'แม้วงแหวนจะกว้างหลายแสนกิโลเมตร แต่มีความหนาเพียงไม่กี่สิบเมตรถึงไม่กี่กิโลเมตร'},
+      {q:'ดาวเสาร์ใช้เวลาโคจรรอบดวงอาทิตย์ครบ 1 รอบประมาณกี่ปีโลก?', a:['1 ปี','12 ปี','29 ปี','84 ปี'], correct:2, exp:'ดาวเสาร์อยู่ไกลจากดวงอาทิตย์มาก จึงใช้เวลาโคจรครบรอบประมาณ 29 ปีโลก'},
+      {q:'ดวงจันทร์ไททันของดาวเสาร์มีลักษณะพิเศษอย่างไร?', a:['ไม่มีบรรยากาศเลย','มีบรรยากาศหนาแน่นและมีทะเลสาบมีเทน','ร้อนที่สุดในระบบสุริยะ','ทำจากโลหะทั้งดวง'], correct:1, exp:'ไททันเป็นดวงจันทร์ดวงเดียวที่มีบรรยากาศหนาแน่น และมีทะเลสาบของมีเทนเหลวบนพื้นผิว'},
+      {q:'ดาวเสาร์มีดวงจันทร์บริวารประมาณกี่ดวง?', a:['ไม่มีเลย','ประมาณ 10 ดวง','มากกว่า 140 ดวง','2 ดวงเท่านั้น'], correct:2, exp:'ปัจจุบันนักดาราศาสตร์ค้นพบดวงจันทร์บริวารของดาวเสาร์แล้วมากกว่า 140 ดวง'},
+      {q:'วงแหวนของดาวเสาร์แบ่งออกเป็นชั้นหลัก ๆ โดยตั้งชื่อด้วยสิ่งใด?', a:['ตัวเลข','ตัวอักษรภาษาอังกฤษ','ชื่อเทพเจ้า','สี'], correct:1, exp:'วงแหวนหลักของดาวเสาร์ถูกตั้งชื่อด้วยตัวอักษรภาษาอังกฤษ เช่น วงแหวน A, B, C ตามลำดับการค้นพบ'},
+      {q:'ดวงจันทร์เอนเซลาดัส (Enceladus) ของดาวเสาร์เป็นที่น่าสนใจเพราะเหตุใด?', a:['มีภูเขาไฟลาวาร้อนจัด','พ่นไอน้ำและน้ำแข็งออกจากขั้วใต้ บ่งชี้ถึงมหาสมุทรใต้ผิว','ไม่มีน้ำแข็งเลย','เป็นดวงจันทร์ที่ใหญ่ที่สุดของดาวเสาร์'], correct:1, exp:'เอนเซลาดัสพ่นละอองน้ำแข็งออกจากรอยแตกขั้วใต้ ซึ่งบ่งชี้ว่ามีมหาสมุทรน้ำเหลวอยู่ใต้เปลือกน้ำแข็ง'},
+      {q:'ยานอวกาศลำใดที่ศึกษาดาวเสาร์และวงแหวนอย่างละเอียดเป็นเวลานานหลายปี?', a:['ยานแคสสินี (Cassini)','ยานไวกิ้ง (Viking)','ยานนิวฮอไรซันส์ (New Horizons)','ยานเมสเซนเจอร์ (MESSENGER)'], correct:0, exp:'ยานแคสสินีโคจรรอบดาวเสาร์นานกว่า 13 ปี ศึกษาวงแหวนและดวงจันทร์บริวารอย่างละเอียด'},
+      {q:'ดาวเสาร์อยู่ห่างจากดวงอาทิตย์มากกว่าโลกกี่เท่าโดยประมาณ?', a:['เท่ากัน','ประมาณ 2 เท่า','ประมาณ 5 เท่า','ประมาณ 10 เท่า'], correct:3, exp:'ดาวเสาร์อยู่ห่างจากดวงอาทิตย์ประมาณ 9.5 หน่วยดาราศาสตร์ (AU) หรือประมาณ 10 เท่าของระยะโลก-ดวงอาทิตย์'},
+      {q:'ลมบนดาวเสาร์มีความเร็วเป็นอย่างไร?', a:['สงบนิ่งที่สุดในระบบสุริยะ','พัดแรงมาก อาจเกิน 1,600 กม./ชม.','ไม่มีลมเลยเพราะไม่มีบรรยากาศ','พัดช้ากว่าลมบนโลกมาก'], correct:1, exp:'ดาวเสาร์มีลมพายุที่รุนแรงมาก บางบริเวณความเร็วลมอาจสูงกว่า 1,600 กิโลเมตรต่อชั่วโมง'},
+      {q:'สีเหลืองอมทองของดาวเสาร์เกิดจากอะไร?', a:['สนิมเหล็กบนพื้นผิว','ผลึกแอมโมเนียในชั้นเมฆบน','น้ำแข็งบริสุทธิ์','แสงสะท้อนจากวงแหวน'], correct:1, exp:'ผลึกแอมโมเนียในชั้นเมฆด้านบนของดาวเสาร์ทำให้ดาวมีสีเหลืองอมทองที่มองเห็นได้'},
+      {q:'ที่ขั้วเหนือของดาวเสาร์พบปรากฏการณ์เมฆรูปทรงพิเศษที่เรียกว่าอะไร?', a:['จุดแดงใหญ่','เมฆรูปหกเหลี่ยม (Hexagon Storm)','วงแหวนไฟ','พายุทรงกลม'], correct:1, exp:'ที่ขั้วเหนือของดาวเสาร์พบรูปแบบเมฆพายุทรงหกเหลี่ยมขนาดใหญ่ที่ไม่พบบนดาวเคราะห์ดวงอื่น'},
+      {q:'มวลของดาวเสาร์เมื่อเทียบกับโลกเป็นอย่างไร?', a:['เบากว่าโลก','หนักกว่าโลกประมาณ 95 เท่า','เท่ากับโลกพอดี','หนักกว่าดวงอาทิตย์'], correct:1, exp:'ดาวเสาร์มีมวลมากกว่าโลกประมาณ 95 เท่า แม้จะมีความหนาแน่นต่ำก็ตาม'},
+      {q:'ดาวเสาร์แผ่รังสีความร้อนออกมาเองหรือไม่?', a:['ไม่มีเลย','มี มากกว่าที่ได้รับจากดวงอาทิตย์','ได้รับความร้อนจากวงแหวนเท่านั้น','เย็นกว่าอวกาศรอบตัว'], correct:1, exp:'ดาวเสาร์ปล่อยพลังงานความร้อนออกมาเองมากกว่าที่ได้รับจากดวงอาทิตย์ คล้ายกับดาวพฤหัสบดี'},
+      {q:'เหตุใดวงแหวนของดาวเสาร์จึงสว่างและมองเห็นได้ชัดจากโลก?', a:['ทำจากทองคำ','ประกอบด้วยอนุภาคน้ำแข็งที่สะท้อนแสงได้ดี','เป็นแหล่งกำเนิดแสงเอง','มีขนาดเล็กมาก'], correct:1, exp:'วงแหวนของดาวเสาร์ประกอบด้วยอนุภาคน้ำแข็งจำนวนมากที่สะท้อนแสงอาทิตย์ได้ดี จึงสว่างและมองเห็นชัดเจน'},
+      {q:'ดาวเสาร์เป็นดาวเคราะห์ดวงเดียวหรือไม่ที่มีวงแหวน?', a:['ใช่ มีเฉพาะดาวเสาร์เท่านั้น','ไม่ใช่ ดาวพฤหัส ดาวยูเรนัส และดาวเนปจูนก็มีวงแหวนเช่นกัน','ใช่ เพราะดาวดวงอื่นไม่มีดวงจันทร์','ไม่แน่ใจ ยังไม่มีการยืนยัน'], correct:1, exp:'นอกจากดาวเสาร์แล้ว ดาวพฤหัสบดี ดาวยูเรนัส และดาวเนปจูน ก็มีระบบวงแหวนของตัวเองเช่นกัน เพียงแต่จางกว่ามาก'}
+    ]},
+  { id:'uranus', name:'URANUS', emoji:'🌀', color:'#7bf0e0',
+    sky1:'#082a28', sky2:'#020c0c', obstacleRate:1.9, obstacleSpeed:1.5,
+    auDist:18.20, lightMin:151.4, speedNeeded:6,
+    alien:{name:'URA', emoji:'🌀', color:'#7bf0e0',
+      desc:'URA มีร่างกลมลอยตัวได้และหมุนตัวไปมา สอดคล้องกับการหมุนรอบตัวเองที่เอียงพิเศษของดาวยูเรนัส',
+      puzzle:{q:'ดาวยูเรนัสมีลักษณะการหมุนรอบตัวเองอย่างไร?', a:['หมุนตั้งตรงเหมือนโลก','หมุนตะแคงเกือบขนานกับวงโคจร','ไม่หมุนเลย','หมุนเร็วที่สุดในระบบสุริยะ'], correct:1, exp:'แกนของดาวยูเรนัสเอียงมากจนเหมือนหมุนตะแคงข้าง'}},
+    questions:[
+      {q:'ดาวยูเรนัสมีสีอะไรเป็นหลัก และเพราะเหตุใด?', a:['แดง จากสนิมเหล็ก','ฟ้าอมเขียว จากก๊าซมีเทน','เหลือง จากกำมะถัน','ขาว จากน้ำแข็งแอมโมเนีย'], correct:1, exp:'ก๊าซมีเทนในบรรยากาศดูดกลืนแสงแดงทำให้ดาวยูเรนัสดูเป็นสีฟ้าอมเขียว'},
+      {q:'ดาวยูเรนัสจัดเป็นดาวเคราะห์ประเภทใด?', a:['ดาวเคราะห์หิน','ดาวเคราะห์น้ำแข็งยักษ์','ดาวเคราะห์แคระ','ดาวเคราะห์ก๊าซร้อน'], correct:1, exp:'ดาวยูเรนัสถูกจัดเป็น "ดาวเคราะห์น้ำแข็งยักษ์" ต่างจากดาวพฤหัสและดาวเสาร์'},
+      {q:'ดาวยูเรนัสอยู่ห่างจากดวงอาทิตย์เป็นลำดับที่เท่าใด?', a:['5','6','7','8'], correct:2, exp:'ดาวยูเรนัสเป็นดาวเคราะห์ลำดับที่ 7 จากดวงอาทิตย์'},
+      {q:'ดาวยูเรนัสถูกค้นพบครั้งแรกโดยใคร?', a:['กาลิเลโอ กาลิเลอี','วิลเลียม เฮอร์เชล','โยฮันเนส เคปเลอร์','เอ็ดมันด์ ฮัลเลย์'], correct:1, exp:'วิลเลียม เฮอร์เชล ค้นพบดาวยูเรนัสในปี ค.ศ. 1781 ด้วยกล้องโทรทรรศน์'},
+      {q:'ดาวยูเรนัสมีวงแหวนหรือไม่?', a:['ไม่มีเลย','มี แต่จางกว่าและมองเห็นยากกว่าของดาวเสาร์','มี และสว่างกว่าดาวเสาร์','มีเฉพาะช่วงฤดูหนาว'], correct:1, exp:'ดาวยูเรนัสมีระบบวงแหวนของตัวเอง แต่จางและบางกว่าวงแหวนของดาวเสาร์มาก'},
+      {q:'ดาวยูเรนัสใช้เวลาโคจรรอบดวงอาทิตย์ครบ 1 รอบประมาณกี่ปีโลก?', a:['29 ปี','84 ปี','165 ปี','1 ปี'], correct:1, exp:'ดาวยูเรนัสอยู่ไกลดวงอาทิตย์มาก จึงใช้เวลาโคจรครบรอบประมาณ 84 ปีโลก'},
+      {q:'องค์ประกอบหลักภายในของดาวยูเรนัสคืออะไร?', a:['หินแข็งล้วน','น้ำแข็ง (น้ำ แอมโมเนีย มีเทน)','โลหะเหลวร้อน','ก๊าซไฮโดรเจนล้วน'], correct:1, exp:'ภายในดาวยูเรนัสประกอบด้วยของเหลวน้ำแข็งชนิดต่าง ๆ เช่น น้ำ แอมโมเนีย และมีเทน'},
+      {q:'ดาวยูเรนัสมีดวงจันทร์บริวารประมาณกี่ดวง?', a:['ไม่มีเลย','ประมาณ 27 ดวง','มากกว่า 90 ดวง','2 ดวงเท่านั้น'], correct:1, exp:'ดาวยูเรนัสมีดวงจันทร์บริวารที่ค้นพบแล้วประมาณ 27 ดวง'},
+      {q:'ดวงจันทร์ของดาวยูเรนัสส่วนใหญ่ตั้งชื่อตามสิ่งใด?', a:['เทพเจ้ากรีก','ตัวละครจากวรรณกรรมของเชกสเปียร์และอเล็กซานเดอร์ โพป','นักวิทยาศาสตร์ผู้ค้นพบ','สัตว์ในตำนาน'], correct:1, exp:'ดวงจันทร์ของดาวยูเรนัส เช่น มิแรนดา เอเรียล ไททาเนีย ตั้งชื่อตามตัวละครจากผลงานของเชกสเปียร์และอเล็กซานเดอร์ โพป'},
+      {q:'ดาวยูเรนัสมีอุณหภูมิเป็นอย่างไรเมื่อเทียบกับดาวเคราะห์ดวงอื่น?', a:['ร้อนที่สุดในระบบสุริยะ','เย็นที่สุดในบรรดาดาวเคราะห์ (แม้ไม่ใช่ดาวที่ไกลที่สุด)','อุ่นกว่าดาวศุกร์','อุณหภูมิพอ ๆ กับโลก'], correct:1, exp:'แม้ดาวเนปจูนจะอยู่ไกลกว่า แต่ดาวยูเรนัสกลับมีอุณหภูมิบรรยากาศต่ำที่สุดในบรรดาดาวเคราะห์ทั้งหมด'},
+      {q:'ดาวยูเรนัสมีขนาดเป็นอย่างไรเมื่อเทียบกับโลก?', a:['เล็กกว่าโลก','ใหญ่กว่าโลกประมาณ 4 เท่า','เท่ากับโลกพอดี','ใหญ่กว่าดาวพฤหัสบดี'], correct:1, exp:'ดาวยูเรนัสมีเส้นผ่านศูนย์กลางใหญ่กว่าโลกประมาณ 4 เท่า'},
+      {q:'ดาวยูเรนัสมีวงแหวนกี่วง (โดยประมาณ) ที่ค้นพบแล้ว?', a:['ไม่มีเลย','ประมาณ 13 วง','วงเดียว','มากกว่า 1,000 วง'], correct:1, exp:'นักดาราศาสตร์ค้นพบวงแหวนของดาวยูเรนัสแล้วประมาณ 13 วง ซึ่งจางกว่าวงแหวนของดาวเสาร์มาก'},
+      {q:'ดาวยูเรนัสมีสถานะเป็นดาวเคราะห์แบบใดเมื่อเทียบกับดาวพฤหัสและดาวเสาร์?', a:['ดาวเคราะห์ก๊าซเหมือนกันทุกประการ','ดาวเคราะห์น้ำแข็งยักษ์ที่มีองค์ประกอบน้ำแข็งมากกว่า','ดาวเคราะห์หินที่มีแกนแข็ง','ดาวเคราะห์แคระ'], correct:1, exp:'ดาวยูเรนัสถูกจัดเป็นดาวเคราะห์น้ำแข็งยักษ์ ต่างจากดาวพฤหัสและดาวเสาร์ที่เป็นดาวเคราะห์ก๊าซยักษ์'},
+      {q:'เหตุใดดาวยูเรนัสจึงมีฤดูกาลที่ยาวนานผิดปกติ?', a:['หมุนรอบตัวเองช้ามาก','แกนเอียงเกือบ 98 องศาและโคจรรอบดวงอาทิตย์นานถึง 84 ปีโลก','อยู่ใกล้ดวงอาทิตย์มาก','ไม่มีบรรยากาศ'], correct:1, exp:'แกนของดาวยูเรนัสเอียงเกือบ 98 องศา บวกกับคาบโคจรรอบดวงอาทิตย์ที่ยาวนาน 84 ปีโลก ทำให้แต่ละขั้วมีฤดูกาลที่ยาวนานหลายสิบปี'},
+      {q:'ยานอวกาศลำใดเคยบินผ่านดาวยูเรนัสอย่างใกล้ชิด?', a:['ยานวอยเอเจอร์ 2','ยานแคสสินี','ยานกาลิเลโอ','ยานนิวฮอไรซันส์'], correct:0, exp:'ยานวอยเอเจอร์ 2 เป็นยานอวกาศลำเดียวที่เคยบินผ่านดาวยูเรนัสอย่างใกล้ชิดในปี ค.ศ. 1986'},
+      {q:'บรรยากาศชั้นบนของดาวยูเรนัสประกอบด้วยก๊าซใดเป็นหลัก?', a:['ไฮโดรเจนและฮีเลียม (มีมีเทนผสม)','ออกซิเจนล้วน','คาร์บอนไดออกไซด์ล้วน','ไนโตรเจนล้วน'], correct:0, exp:'บรรยากาศชั้นบนของดาวยูเรนัสประกอบด้วยไฮโดรเจนและฮีเลียมเป็นหลัก โดยมีก๊าซมีเทนผสมอยู่ในปริมาณเล็กน้อย'},
+      {q:'ดาวยูเรนัสมีวงแหวนที่ค้นพบด้วยวิธีใดเป็นครั้งแรก?', a:['ถ่ายภาพโดยตรงจากกล้องโทรทรรศน์อวกาศ','สังเกตการบดบังแสงดาวฤกษ์ (Stellar Occultation)','ยานอวกาศบินผ่านโดยบังเอิญ','คำนวณทางคณิตศาสตร์ล่วงหน้า'], correct:1, exp:'นักดาราศาสตร์ค้นพบวงแหวนของดาวยูเรนัสในปี ค.ศ. 1977 จากการสังเกตดาวฤกษ์ถูกบดบังแสงเป็นช่วง ๆ ขณะดาวยูเรนัสเคลื่อนผ่าน'},
+      {q:'ดาวยูเรนัสมีสนามแม่เหล็กมีลักษณะอย่างไร?', a:['ไม่มีสนามแม่เหล็กเลย','เอียงทำมุมแปลกไปจากแกนหมุนของดาวมาก','ตรงกับแกนหมุนพอดีเหมือนโลก','อ่อนที่สุดในระบบสุริยะ'], correct:1, exp:'สนามแม่เหล็กของดาวยูเรนัสเอียงทำมุมกับแกนหมุนของดาวมากผิดปกติ และไม่ผ่านศูนย์กลางดาวพอดี'},
+      {q:'ดาวยูเรนัสถูกตั้งชื่อตามสิ่งใด?', a:['เทพเจ้าแห่งท้องฟ้าของกรีกโบราณ','นักดาราศาสตร์ผู้ค้นพบ','กษัตริย์อังกฤษ','ดวงจันทร์บริวารดวงแรกที่พบ'], correct:0, exp:'ชื่อ Uranus มาจาก Ouranos เทพเจ้าแห่งท้องฟ้าในตำนานกรีกโบราณ'},
+      {q:'ดาวยูเรนัสมีความหนาแน่นเป็นอย่างไรเมื่อเทียบกับดาวเคราะห์ก๊าซยักษ์อีก 2 ดวง?', a:['หนาแน่นน้อยที่สุดในระบบสุริยะ','มีความหนาแน่นสูงกว่าดาวพฤหัสและดาวเสาร์','เท่ากับดวงอาทิตย์','ไม่มีความหนาแน่นเลย'], correct:1, exp:'แม้จะเป็นดาวเคราะห์น้ำแข็งยักษ์ แต่ดาวยูเรนัสมีความหนาแน่นสูงกว่าดาวพฤหัสบดีและดาวเสาร์ซึ่งเป็นดาวเคราะห์ก๊าซยักษ์'}
+    ]},
+  { id:'neptune', name:'NEPTUNE', emoji:'🔵', color:'#5b7bff',
+    sky1:'#080e3a', sky2:'#02030f', obstacleRate:2.2, obstacleSpeed:1.65,
+    auDist:29.05, lightMin:241.6, speedNeeded:7,
+    alien:{name:'NEPTO', emoji:'🌊', color:'#5b9bff',
+      desc:'NEPTO มีครีบเล็ก ๆ และพลังงานคล้ายกระแสน้ำวนรอบตัว ปรับตัวให้ทนลมพายุรุนแรงของดาวเนปจูน',
+      puzzle:{q:'ดาวเนปจูนขึ้นชื่อเรื่องปรากฏการณ์ใด?', a:['อากาศสงบนิ่งที่สุด','ลมแรงที่สุดในระบบสุริยะ','ไม่มีบรรยากาศ','ร้อนที่สุดในระบบสุริยะ'], correct:1, exp:'ดาวเนปจูนมีลมพายุที่แรงที่สุดในระบบสุริยะ ความเร็วกว่า 2,000 กม./ชม.'}},
+    questions:[
+      {q:'ดาวเนปจูนมีสีน้ำเงินเข้มจากอะไร?', a:['น้ำทะเล','ก๊าซมีเทน','โลหะทองแดง','แร่โคบอลต์'], correct:1, exp:'ก๊าซมีเทนในบรรยากาศทำให้ดาวเนปจูนมีสีน้ำเงินเข้ม'},
+      {q:'ดาวเนปจูนเป็นดาวเคราะห์ลำดับสุดท้ายของระบบสุริยะหรือไม่?', a:['ใช่ อยู่ไกลที่สุด', 'ไม่ใช่ ดาวพลูโตอยู่ไกลกว่า', 'ไม่ใช่ ดาวยูเรนัสอยู่ไกลกว่า', 'ไม่แน่ใจ'], correct:0, exp:'นับตั้งแต่ดาวพลูโตถูกจัดเป็นดาวเคราะห์แคระ ดาวเนปจูนจึงเป็นดาวเคราะห์ที่ไกลที่สุด'},
+      {q:'อุณหภูมิของดาวเนปจูนเป็นอย่างไร?', a:['ร้อนจัด','เย็นจัด (หนาวมาก)','อุณหภูมิห้อง','เปลี่ยนแปลงตลอดเวลา'], correct:1, exp:'ดาวเนปจูนอยู่ไกลดวงอาทิตย์มาก จึงมีอุณหภูมิเยือกเย็นราว -200°C'},
+      {q:'ดาวเนปจูนถูกค้นพบด้วยวิธีใดเป็นครั้งแรก?', a:['สังเกตด้วยตาเปล่า','คำนวณทางคณิตศาสตร์ก่อนแล้วจึงสังเกตยืนยัน','ยานอวกาศบินผ่านโดยบังเอิญ','ภาพถ่ายจากกล้องโทรทรรศน์อวกาศ'], correct:1, exp:'นักดาราศาสตร์คำนวณตำแหน่งของดาวเนปจูนจากแรงโน้มถ่วงที่รบกวนวงโคจรของดาวยูเรนัส ก่อนจะค้นพบจริงในปี ค.ศ. 1846'},
+      {q:'ดวงจันทร์บริวารที่ใหญ่ที่สุดของดาวเนปจูนมีชื่อว่าอะไร?', a:['ไททัน','ไทรทัน','ยูโรปา','คาลิสโต'], correct:1, exp:'ไทรทัน (Triton) เป็นดวงจันทร์บริวารที่ใหญ่ที่สุดของดาวเนปจูน และโคจรสวนทางกับการหมุนของดาว'},
+      {q:'ดาวเนปจูนใช้เวลาโคจรรอบดวงอาทิตย์ครบ 1 รอบประมาณกี่ปีโลก?', a:['84 ปี','165 ปี','248 ปี','1 ปี'], correct:1, exp:'ดาวเนปจูนอยู่ไกลดวงอาทิตย์ที่สุด จึงใช้เวลาโคจรครบรอบประมาณ 165 ปีโลก'},
+      {q:'ดาวเนปจูนมีพายุหมุนขนาดใหญ่คล้ายจุดแดงใหญ่ของดาวพฤหัสหรือไม่?', a:['ไม่มีเลย','มี เรียกว่าจุดดำใหญ่ (Great Dark Spot)','มีแต่เป็นสีเหลือง','มีเฉพาะที่ขั้วดาวเท่านั้น'], correct:1, exp:'ดาวเนปจูนเคยมีพายุหมุนขนาดใหญ่ที่เรียกว่าจุดดำใหญ่ ตรวจพบโดยยานวอยเอเจอร์ 2'},
+      {q:'ดาวเนปจูนมีวงแหวนหรือไม่?', a:['ไม่มีเลย','มี แต่จางและมองเห็นยากมาก','มี และสว่างที่สุดในระบบสุริยะ','มีเฉพาะฤดูร้อน'], correct:1, exp:'ดาวเนปจูนมีวงแหวนบาง ๆ หลายชั้นที่จางมากจนตรวจพบได้ยากจากโลก'},
+      {q:'ดาวเนปจูนมีดวงจันทร์บริวารประมาณกี่ดวง?', a:['ไม่มีเลย','ประมาณ 16 ดวง','มากกว่า 90 ดวง','2 ดวงเท่านั้น'], correct:1, exp:'ปัจจุบันนักดาราศาสตร์ค้นพบดวงจันทร์บริวารของดาวเนปจูนแล้วประมาณ 16 ดวง'},
+      {q:'ไทรทัน (Triton) ดวงจันทร์ที่ใหญ่ที่สุดของดาวเนปจูน มีลักษณะการโคจรพิเศษอย่างไร?', a:['โคจรตามทิศทางการหมุนของดาวเนปจูนปกติ','โคจรสวนทางกับการหมุนของดาวเนปจูน (retrograde)','ไม่โคจรรอบดาวเนปจูนเลย','โคจรเป็นเส้นตรง'], correct:1, exp:'ไทรทันโคจรสวนทางกับทิศทางการหมุนของดาวเนปจูน ซึ่งบ่งชี้ว่าอาจเคยเป็นวัตถุที่ถูกแรงโน้มถ่วงจับไว้จากภายนอก'},
+      {q:'ดาวเนปจูนจัดเป็นดาวเคราะห์ประเภทใด?', a:['ดาวเคราะห์หิน','ดาวเคราะห์น้ำแข็งยักษ์','ดาวเคราะห์ก๊าซร้อน','ดาวเคราะห์แคระ'], correct:1, exp:'ดาวเนปจูนถูกจัดเป็นดาวเคราะห์น้ำแข็งยักษ์เช่นเดียวกับดาวยูเรนัส'},
+      {q:'ยานอวกาศลำใดเคยบินผ่านดาวเนปจูนอย่างใกล้ชิดเพียงลำเดียว?', a:['ยานวอยเอเจอร์ 2','ยานแคสสินี','ยานนิวฮอไรซันส์','ยานกาลิเลโอ'], correct:0, exp:'ยานวอยเอเจอร์ 2 เป็นยานอวกาศลำเดียวที่เคยบินผ่านดาวเนปจูนในปี ค.ศ. 1989'},
+      {q:'ดาวเนปจูนมีขนาดเป็นอย่างไรเมื่อเทียบกับโลก?', a:['เล็กกว่าโลก','ใหญ่กว่าโลกประมาณ 4 เท่า','เท่ากับโลกพอดี','ใหญ่กว่าดาวพฤหัสบดี'], correct:1, exp:'ดาวเนปจูนมีเส้นผ่านศูนย์กลางใหญ่กว่าโลกประมาณ 4 เท่า ใกล้เคียงกับดาวยูเรนัส'},
+      {q:'ดาวเนปจูนถูกตั้งชื่อตามสิ่งใด?', a:['เทพเจ้าแห่งท้องทะเลของโรมัน','นักดาราศาสตร์ผู้ค้นพบ','กษัตริย์ฝรั่งเศส','สัตว์ในตำนานกรีก'], correct:0, exp:'ชื่อ Neptune มาจากเทพเจ้าแห่งท้องทะเลของโรมัน ตามธรรมเนียมการตั้งชื่อดาวเคราะห์ด้วยชื่อเทพเจ้า'},
+      {q:'บรรยากาศของดาวเนปจูนประกอบด้วยก๊าซใดเป็นหลัก?', a:['ไฮโดรเจนและฮีเลียม (มีมีเทนผสม)','ออกซิเจนล้วน','คาร์บอนไดออกไซด์ล้วน','ไนโตรเจนล้วน'], correct:0, exp:'บรรยากาศของดาวเนปจูนประกอบด้วยไฮโดรเจนและฮีเลียมเป็นหลัก โดยมีก๊าซมีเทนทำให้ดาวมีสีน้ำเงินเข้ม'},
+      {q:'แกนกลางของดาวเนปจูนเชื่อว่ามีลักษณะอย่างไร?', a:['เป็นก๊าซล้วนไม่มีแกนแข็ง','เป็นแกนหินและน้ำแข็งที่ร้อนและมีความหนาแน่นสูง','เป็นน้ำแข็งเย็นจัดล้วน','เป็นเพชรทั้งก้อน'], correct:1, exp:'นักวิทยาศาสตร์เชื่อว่าดาวเนปจูนมีแกนกลางที่เป็นหินและน้ำแข็งภายใต้ความร้อนและความดันสูงมาก'},
+      {q:'ดาวเนปจูนแผ่พลังงานความร้อนออกมาเองหรือไม่?', a:['ไม่มีเลย','มี มากกว่าพลังงานที่ได้รับจากดวงอาทิตย์','ได้รับความร้อนจากไทรทันเท่านั้น','เย็นกว่าอวกาศรอบตัว'], correct:1, exp:'ดาวเนปจูนปล่อยพลังงานความร้อนออกมาเองมากกว่าที่ได้รับจากดวงอาทิตย์ ซึ่งเป็นเรื่องน่าประหลาดใจเพราะอยู่ไกลดวงอาทิตย์มาก'},
+      {q:'ดาวเนปจูนถูกค้นพบก่อนหรือหลังดาวยูเรนัส?', a:['ก่อน','หลัง','พบพร้อมกัน','ยังไม่มีใครค้นพบ'], correct:1, exp:'ดาวยูเรนัสถูกค้นพบก่อนในปี ค.ศ. 1781 ส่วนดาวเนปจูนถูกค้นพบภายหลังในปี ค.ศ. 1846'},
+      {q:'ไทรทันมีลักษณะพื้นผิวพิเศษอย่างไร?', a:['ร้อนจัดตลอดเวลา','มีภูเขาไฟน้ำแข็ง (Cryovolcano) ที่พ่นไนโตรเจนเหลว','ไม่มีพื้นผิวที่แข็ง','เป็นก๊าซล้วน'], correct:1, exp:'ไทรทันมีภูเขาไฟน้ำแข็งที่พ่นไนโตรเจนเหลวออกมาสู่พื้นผิว ทำให้เป็นหนึ่งในไม่กี่วัตถุที่มีการเคลื่อนไหวทางธรณีวิทยาที่ยังทำงานอยู่'},
+      {q:'ดาวเนปจูนถูกค้นพบครั้งแรกในปีใด?', a:['ค.ศ. 1781','ค.ศ. 1846','ค.ศ. 1930','ค.ศ. 1610'], correct:1, exp:'ดาวเนปจูนถูกค้นพบในปี ค.ศ. 1846 หลังจากนักดาราศาสตร์คำนวณตำแหน่งไว้ล่วงหน้าจากแรงโน้มถ่วงที่รบกวนวงโคจรของดาวยูเรนัส'}
+    ]}
+];
+
+function formatLightTime(min){
+  if(min<60) return min.toFixed(1)+' นาทีแสง';
+  const h=Math.floor(min/60), m=Math.round(min%60);
+  return h+' ชั่วโมง '+m+' นาทีแสง';
+}
+function distanceFactText(planet){
+  if(!planet.speedNeeded) return null;
+  return '🌍 → '+planet.emoji+' ระยะทางจากโลกถึง'+planet.name+' ห่างกันประมาณ '+planet.auDist.toFixed(2)+
+    ' หน่วยดาราศาสตร์ (AU) แสงต้องใช้เวลาเดินทางราว '+formatLightTime(planet.lightMin)+
+    ' ยาน NOVA-X ต้องใช้พลัง ⚡ SPEED '+planet.speedNeeded+' ครั้ง เพื่อข้ามระยะทางนี้ (ระยะจริงเปลี่ยนแปลงตามตำแหน่งวงโคจร)';
+}
+
+const RANKS=[
+  {min:300, name:'LEGENDARY COSMIC SCIENTIST'},
+  {min:200, name:'SPACE SCIENTIST'},
+  {min:100, name:'JUNIOR SPACE EXPLORER'},
+  {min:0,   name:'SCIENCE ROOKIE'}
+];
+function getRank(score){ for(const r of RANKS) if(score>=r.min) return r.name; return RANKS[RANKS.length-1].name; }
+
+/* ============================================================
+   GAME STATE
+============================================================ */
+const State = { START:'start', PLAYING:'playing', DIALOG:'dialog', BOSS:'boss', PAUSED:'paused', FAIL:'fail', END:'end', MAP:'map' };
+let game = {
+  state: State.START,
+  planetIndex: 0,
+  unlockedPlanets: 1,
+  health: 3,
+  score: 0,
+  crystals: 0,
+  correctCount: 0,
+  wrongCount: 0,
+  distance: 0,
+  startTime: 0,
+  soundOn: true,
+  travelInPlanet: 0,     // progress within current planet (m)
+  planetTarget: 900,     // distance needed to trigger the alien encounter
+  alienDone: false,
+  pendingBoss: false,
+  wrongAttemptsOnPuzzle: 0,
+  speedChargesUsed: 0,
+  bossEscapeUsed: 0
+};
+
+/* ============================================================
+   PLAYER SHIP
+============================================================ */
+let ship = { laneX:0.5, targetX:0.5, y:0, vx:0, boosting:0, hitFlash:0, engineFrame:0 };
+function resetShip(){ ship.laneX=0.5; ship.targetX=0.5; ship.vx=0; ship.boosting=0; ship.hitFlash=0; }
+
+/* ============================================================
+   ENTITIES
+============================================================ */
+let obstacles=[]; // {x(0-1),y,type,r,speed}
+let crystalsList=[];
+let particles=[];
+let floatTexts=[];
+let baseSpeed = 0.28; // world units per second (normalized 0..H)
+let spawnTimer=0;
+
+function spawnObstacle(planet){
+  const types=['asteroid','asteroid','rock','debris'];
+  const t=types[Math.floor(Math.random()*types.length)];
+  obstacles.push({
+    x: 0.12+Math.random()*0.76,
+    y: -0.1,
+    r: 0.028+Math.random()*0.03,
+    type:t,
+    speed: (0.9+Math.random()*0.5)*planet.obstacleSpeed,
+    rot: Math.random()*6.28,
+    rotSpeed:(Math.random()-0.5)*3
+  });
+}
+function spawnCrystal(){
+  crystalsList.push({ x:0.12+Math.random()*0.76, y:-0.1, r:0.022, phase:Math.random()*6.28 });
+}
+function spawnParticles(x,y,color,n,speedMul){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*6.28, sp=(0.3+Math.random()*0.6)*(speedMul||1);
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:0.6+Math.random()*0.5,age:0,color,r:2+Math.random()*3});
+  }
+}
+function addFloatText(text,color){
+  const el=document.createElement('div');
+  el.className='float-txt'; el.textContent=text; el.style.color=color||'#fff';
+  el.style.left=(W*ship.laneX-20)+'px'; el.style.top=(H*0.72)+'px';
+  el.style.fontSize='20px';
+  document.getElementById('gameContainer').appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+/* ============================================================
+   BOSS STATE
+============================================================ */
+let boss = { hp:5, maxHp:5, x:0.5, phase:0, questionsUsed:[] };
+let laserCooldown=0, laserFlashTimer=0, bossDefeated=false;
+const LASER_COOLDOWN=0.35, LASER_DAMAGE=1;
+const BOSS_ESCAPE_NEEDED=5; // number of SPEED charges needed to escape after boss is destroyed
+
+// ---- small alien swarm that spawns once the big boss dissolves ----
+let smallAliens=[];
+let alienSpawnTimer=0;
+const SMALL_ALIEN_HP=2, SMALL_ALIEN_SCORE=15;
+function spawnSmallAlien(){
+  smallAliens.push({
+    x: 0.15+Math.random()*0.7,
+    y: 0.12+Math.random()*0.14,
+    r: 0.03,
+    hp: SMALL_ALIEN_HP,
+    maxHp: SMALL_ALIEN_HP,
+    phase: Math.random()*6.28,
+    drift: (Math.random()-0.5)*0.5,
+    hitShip: false
+  });
+}
+function updateSmallAliens(dt){
+  alienSpawnTimer -= dt;
+  if(alienSpawnTimer<=0 && smallAliens.length<6){
+    spawnSmallAlien();
+    alienSpawnTimer = 0.5+Math.random()*0.5;
+  }
+  for(let i=smallAliens.length-1;i>=0;i--){
+    const a=smallAliens[i];
+    a.phase += dt*3;
+    a.y += baseSpeed*0.55*dt*1.4;
+    a.x += Math.sin(a.phase)*a.drift*dt;
+    if(a.x<0.1) a.x=0.1; if(a.x>0.9) a.x=0.9;
+    // colliding with the ship doesn't destroy the alien — it grazes past and
+    // keeps going, only a laser hit or leaving the screen removes it
+    if(!a.hitShip && Math.abs(a.y-0.80)<0.05+a.r*0.5 && Math.abs(a.x-ship.laneX)<0.055+a.r*0.6){
+      a.hitShip = true;
+      ship.hitFlash = 0.4;
+      gameCanvas.classList.add('shake'); setTimeout(()=>gameCanvas.classList.remove('shake'),350);
+      Audio_.crash();
+      spawnParticles(a.x*W, a.y*H, '#ff5b5b', 10, 1.1);
+    }
+    if(a.y>1.1){ smallAliens.splice(i,1); continue; }
+  }
+}
+function drawSmallAliens(){
+  smallAliens.forEach(a=>{
+    const x=a.x*W, y=a.y*H, r=a.r*Math.min(W,H)*(1+Math.sin(a.phase)*0.08);
+    gctx.save(); gctx.translate(x,y);
+    gctx.shadowColor='#a95bff'; gctx.shadowBlur=16;
+    gctx.fillStyle='#c79bff';
+    gctx.beginPath();
+    gctx.arc(0,-r*0.1,r*0.75,0,7); gctx.fill();
+    gctx.beginPath();
+    gctx.moveTo(-r*0.7,r*0.15); gctx.lineTo(r*0.7,r*0.15); gctx.lineTo(r*0.4,r*0.7); gctx.lineTo(-r*0.4,r*0.7);
+    gctx.closePath(); gctx.fill();
+    gctx.fillStyle='#3a0a6e';
+    gctx.beginPath(); gctx.arc(-r*0.28,-r*0.15,r*0.16,0,7); gctx.arc(r*0.28,-r*0.15,r*0.16,0,7); gctx.fill();
+    gctx.restore();
+    // tiny hp pips
+    if(a.hp<a.maxHp){
+      gctx.save();
+      gctx.translate(x, y-r*1.5);
+      for(let p=0;p<a.maxHp;p++){
+        gctx.fillStyle = p<a.hp ? '#7be3ff' : 'rgba(255,255,255,.2)';
+        gctx.beginPath(); gctx.arc((p-(a.maxHp-1)/2)*8,0,3,0,7); gctx.fill();
+      }
+      gctx.restore();
+    }
+  });
+}
+function fireLaser(){
+  if(game.state!==State.BOSS) return;
+  if(laserCooldown>0) return;
+  laserCooldown=LASER_COOLDOWN;
+  laserFlashTimer=0.12;
+  Audio_.laser();
+
+  if(!bossDefeated){
+    boss.hp -= LASER_DAMAGE;
+    updateBossBar();
+    spawnParticles(boss.x*W, 0.22*H, '#ff5bd0', 10, 1.1);
+    if(boss.hp<=0 && !bossDefeated){
+      bossDefeated=true;
+      Audio_.bossHit();
+      spawnParticles(boss.x*W, 0.22*H, '#ffdf7a', 45, 1.8);
+      document.getElementById('bossBar').classList.add('hidden');
+      game.bossEscapeUsed = 0;
+      smallAliens=[]; alienSpawnTimer=0.4;
+      document.getElementById('planetLabel').textContent='🚀 ESCAPE!';
+      addFloatText('COSMIC CHAOS DESTROYED! กด ⚡ SPEED ให้ครบ '+BOSS_ESCAPE_NEEDED,'#7bd8ff');
+      updateHud();
+      // player must now press SPEED/BOOST enough times to fly clear before the mission ends,
+      // while small aliens keep spawning from the dissolved boss for the player to shoot down
+    }
+    return;
+  }
+
+  // boss is gone — laser now targets the small alien swarm instead
+  if(!smallAliens.length) return;
+  let idx=0, bestDist=Infinity;
+  smallAliens.forEach((a,i)=>{
+    const d = Math.abs(a.x-ship.laneX)+a.y;
+    if(d<bestDist){ bestDist=d; idx=i; }
+  });
+  const a = smallAliens[idx];
+  a.hp -= 1;
+  spawnParticles(a.x*W, a.y*H, '#c79bff', 8, 1);
+  if(a.hp<=0){
+    spawnParticles(a.x*W, a.y*H, '#ffdf7a', 16, 1.4);
+    game.score += SMALL_ALIEN_SCORE;
+    addFloatText('+'+SMALL_ALIEN_SCORE,'#ffdf7a');
+    smallAliens.splice(idx,1);
+    updateHud();
+  }
+}
+function drawLaserBeam(){
+  if(laserFlashTimer<=0) return;
+  const x1=ship.laneX*W, y1=0.72*H, x2=boss.x*W, y2=0.22*H;
+  gctx.save();
+  gctx.strokeStyle='rgba(255,91,208,.55)'; gctx.lineWidth=16; gctx.lineCap='round';
+  gctx.beginPath(); gctx.moveTo(x1,y1); gctx.lineTo(x2,y2); gctx.stroke();
+  gctx.strokeStyle='rgba(255,255,255,.95)'; gctx.lineWidth=5; gctx.lineCap='round';
+  gctx.shadowColor='#ff5bd0'; gctx.shadowBlur=22;
+  gctx.beginPath(); gctx.moveTo(x1,y1); gctx.lineTo(x2,y2); gctx.stroke();
+  gctx.restore();
+}
+
+/* ============================================================
+   INPUT
+============================================================ */
+let keys={};
+window.addEventListener('keydown', e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(['a','arrowleft'].includes(e.key.toLowerCase())) moveLeft();
+  if(['d','arrowright'].includes(e.key.toLowerCase())) moveRight();
+  if(e.key==='Escape' && (game.state===State.PLAYING||game.state===State.PAUSED)) togglePause();
+  // DEV SHORTCUT: Ctrl+Shift+L jumps straight to the final boss stage (testing only)
+  if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='l'){ e.preventDefault(); devJumpToBoss(); }
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+
+function moveLeft(){ ship.targetX = Math.max(0.1, ship.targetX-0.22); }
+function moveRight(){ ship.targetX = Math.min(0.9, ship.targetX+0.22); }
+
+/* ---- DEV: skip straight to the final boss stage for testing ----
+   Trigger with Ctrl+Shift+L at any time, or by loading the page
+   with ?dev=boss in the URL (e.g. game.html?dev=boss). Not linked
+   from any in-game UI, so normal players won't stumble into it. */
+function devJumpToBoss(){
+  dialogPanel.classList.add('hidden');
+  Audio_.engineStop();
+  game.unlockedPlanets = PLANETS.length;
+  game.planetIndex = PLANETS.length-1;
+  game.health = 3;
+  game.score = Math.max(game.score, 500);
+  if(!game.startTime) game.startTime = performance.now();
+  setHudVisible(false);
+  triggerUnknownSignal();
+}
+if(new URLSearchParams(location.search).get('dev')==='boss'){
+  window.addEventListener('load', ()=> setTimeout(devJumpToBoss, 300));
+}
+// DEV SHORTCUT (touch-friendly): tap the rocket 🚀 on the start screen
+// 5 times within 3 seconds to jump straight to the boss stage.
+(function(){
+  const rocket = document.getElementById('shipPreview');
+  let tapCount=0, tapTimer=null;
+  rocket.addEventListener('click', ()=>{
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{ tapCount=0; },3000);
+    if(tapCount>=5){
+      tapCount=0; clearTimeout(tapTimer);
+      Audio_.start();
+      devJumpToBoss();
+    }
+  });
+})();
+
+document.getElementById('btnLeft').addEventListener('touchstart', e=>{e.preventDefault(); moveLeft();});
+document.getElementById('btnRight').addEventListener('touchstart', e=>{e.preventDefault(); moveRight();});
+document.getElementById('btnLeft').addEventListener('click', moveLeft);
+document.getElementById('btnRight').addEventListener('click', moveRight);
+
+// swipe controls (touch)
+let touchStartX=null;
+gameCanvas.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; },{passive:true});
+gameCanvas.addEventListener('touchend', e=>{
+  if(touchStartX===null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(Math.abs(dx)>30){ dx<0?moveLeft():moveRight(); }
+  touchStartX=null;
+},{passive:true});
+
+// mouse controls (desktop): drag like a swipe, or just click left/right side of the ship lane
+let mouseDownX=null;
+gameCanvas.addEventListener('mousedown', e=>{ mouseDownX=e.clientX; });
+window.addEventListener('mouseup', e=>{
+  if(mouseDownX===null) return;
+  const dx = e.clientX - mouseDownX;
+  if(Math.abs(dx)>30){
+    dx<0?moveLeft():moveRight();
+  } else if(game.state===State.PLAYING || game.state===State.BOSS){
+    // treat as a simple click: move toward whichever side of the ship was clicked
+    const rect = gameCanvas.getBoundingClientRect();
+    const clickX = (e.clientX-rect.left)/rect.width;
+    clickX<ship.laneX?moveLeft():moveRight();
+  }
+  mouseDownX=null;
+});
+gameCanvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+/* ============================================================
+   SCREEN MANAGEMENT
+============================================================ */
+const screens = {
+  start: document.getElementById('startScreen'),
+  howto: document.getElementById('howToScreen'),
+  hs: document.getElementById('hsScreen'),
+  transition: document.getElementById('transitionScreen'),
+  map: document.getElementById('mapScreen'),
+  fail: document.getElementById('failScreen'),
+  end: document.getElementById('endScreen'),
+  pause: document.getElementById('pauseScreen')
+};
+function showScreen(name){
+  Object.values(screens).forEach(s=>s.classList.add('hidden'));
+  if(name) screens[name].classList.remove('hidden');
+}
+function setHudVisible(v){
+  document.getElementById('hud').classList.toggle('hidden', !v);
+  document.getElementById('topRightIcons').classList.toggle('hidden', !v);
+  document.getElementById('boostBtn').classList.toggle('hidden', !v || !isTouchDevice);
+  document.getElementById('swipeHint').classList.toggle('hidden', !v);
+  document.getElementById('touchControls').classList.toggle('hidden', !v || !isTouchDevice);
+  if(!v) document.getElementById('laserBtn').classList.add('hidden');
+}
+
+/* ============================================================
+   BUTTON WIRING
+============================================================ */
+document.getElementById('btnStart').addEventListener('click', ()=>{ Audio_.start(); startTransition(); });
+document.getElementById('btnHowTo').addEventListener('click', ()=> showScreen('howto'));
+document.getElementById('btnBackFromHowTo').addEventListener('click', ()=> showScreen('start'));
+document.getElementById('btnHighScore').addEventListener('click', ()=>{ renderHighScores(); showScreen('hs'); });
+document.getElementById('btnBackFromHs').addEventListener('click', ()=> showScreen('start'));
+document.getElementById('btnMapToStart').addEventListener('click', ()=>{ resetFullGame(); showScreen('start'); });
+document.getElementById('btnMapTravel').addEventListener('click', ()=>{
+  if(mapSelectedIndex===null) return;
+  const idx=mapSelectedIndex;
+  document.getElementById('mapInfoPanel').classList.add('hidden');
+  const fact = distanceFactText(PLANETS[idx]);
+  if(fact){
+    showScreen('transition');
+    document.getElementById('transitionEmoji').textContent = PLANETS[idx].emoji;
+    document.getElementById('transitionText').textContent = fact;
+    setTimeout(()=>{ startPlanet(idx,false); }, 2200);
+  } else {
+    startPlanet(idx,false);
+  }
+});
+document.getElementById('btnRetry').addEventListener('click', ()=>{ startPlanet(game.planetIndex, true); });
+document.getElementById('btnFailToMap').addEventListener('click', ()=>{ renderMap(); showScreen('map'); game.state=State.MAP; });
+document.getElementById('btnPlayAgain').addEventListener('click', ()=>{ resetFullGame(); startTransition(); });
+document.getElementById('btnEndMap').addEventListener('click', ()=>{ renderMap(); showScreen('map'); game.state=State.MAP; });
+document.getElementById('btnEndHs').addEventListener('click', ()=>{ renderHighScores(); showScreen('hs'); });
+document.getElementById('btnSaveScore').addEventListener('click', saveHighScore);
+document.getElementById('btnResume').addEventListener('click', togglePause);
+document.getElementById('btnQuitToStart').addEventListener('click', ()=>{ resetFullGame(); showScreen('start'); });
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('soundBtn').addEventListener('click', ()=>{
+  game.soundOn=!game.soundOn; Audio_.setEnabled(game.soundOn);
+  document.getElementById('soundBtn').textContent = game.soundOn?'🔊':'🔇';
+});
+document.getElementById('boostBtn').addEventListener('click', useSpeed);
+document.getElementById('laserBtn').addEventListener('click', fireLaser);
+document.getElementById('laserBtn').addEventListener('touchstart', e=>{ e.preventDefault(); fireLaser(); });
+window.addEventListener('keydown', e=>{
+  if((e.key===' '||e.code==='Space') && game.state===State.BOSS){ e.preventDefault(); fireLaser(); }
+  if(e.key==='Shift' && !e.repeat && (game.state===State.PLAYING||game.state===State.BOSS)){ useSpeed(); }
+});
+
+function togglePause(){
+  if(game.state===State.PLAYING){ game.state=State.PAUSED; showScreen('pause'); Audio_.engineStop(); }
+  else if(game.state===State.PAUSED){ game.state=State.PLAYING; showScreen(null); Audio_.engineStart(); }
+}
+
+/* ============================================================
+   TRANSITION -> gameplay start
+============================================================ */
+function startTransition(){
+  showScreen('transition');
+  document.getElementById('transitionEmoji').textContent='🚀';
+  document.getElementById('transitionText').textContent='พุ่งเข้าสู่อวกาศ...';
+  gameCanvas.classList.add('shake');
+  setTimeout(()=>{ gameCanvas.classList.remove('shake'); startPlanet(0,true); }, 750);
+}
+
+function resetFullGame(){
+  game.planetIndex=0; game.unlockedPlanets=1; game.health=3; game.score=0; game.crystals=0;
+  game.correctCount=0; game.wrongCount=0; game.distance=0; game.pendingBoss=false;
+  game.state = State.START;
+  obstacles=[]; crystalsList=[]; particles=[]; smallAliens=[]; alienSpawnTimer=0;
+  laserCooldown=0; laserFlashTimer=0; bossDefeated=false; game.bossEscapeUsed=0;
+  setHudVisible(false);
+  document.getElementById('bossBar').classList.add('hidden');
+  document.getElementById('laserBtn').classList.add('hidden');
+  document.getElementById('dialogPanel').classList.add('hidden');
+  showScreen(null);
+}
+
+/* ============================================================
+   START A PLANET LEVEL
+============================================================ */
+function startPlanet(idx, freshRun){
+  game.planetIndex = idx;
+  game.travelInPlanet = 0;
+  game.alienDone = false;
+  game.wrongAttemptsOnPuzzle = 0;
+  game.speedChargesUsed = 0;
+  game.health = 3;
+  obstacles=[]; crystalsList=[]; particles=[]; spawnTimer=0;
+  resetShip();
+  if(!game.startTime) game.startTime = performance.now();
+  showScreen(null); setHudVisible(true);
+  document.getElementById('bossBar').classList.add('hidden');
+  updateHud();
+  game.state = State.PLAYING;
+  Audio_.engineStart();
+}
+
+/* ============================================================
+   HUD UPDATE
+============================================================ */
+function updateHud(){
+  const p = (game.state===State.BOSS) ? null : PLANETS[game.planetIndex];
+  document.getElementById('hearts').innerHTML =
+    '❤️'.repeat(Math.max(0,game.health)) + '<span class="lost">'+'❤️'.repeat(Math.max(0,3-game.health))+'</span>';
+  document.getElementById('crystalCount').textContent = String(game.crystals).padStart(2,'0');
+  document.getElementById('scoreCount').textContent = game.score;
+  const speedLabel=document.getElementById('speedLabel');
+  if(game.state===State.BOSS && bossDefeated){
+    speedLabel.classList.remove('hidden');
+    document.getElementById('speedCount').textContent = game.bossEscapeUsed+'/'+BOSS_ESCAPE_NEEDED;
+  } else if(p){
+    document.getElementById('planetLabel').textContent = p.emoji+' '+p.name;
+    if(p.speedNeeded>0){
+      speedLabel.classList.remove('hidden');
+      document.getElementById('speedCount').textContent = game.speedChargesUsed+'/'+p.speedNeeded;
+    } else {
+      speedLabel.classList.add('hidden');
+    }
+  } else {
+    speedLabel.classList.add('hidden');
+  }
+  const boostBtn=document.getElementById('boostBtn');
+  const canAfford = game.score>=SPEED_COST;
+  let chargesLeft;
+  if(game.state===State.BOSS && bossDefeated){
+    chargesLeft = game.bossEscapeUsed < BOSS_ESCAPE_NEEDED;
+  } else {
+    chargesLeft = !p || p.speedNeeded<=0 || game.speedChargesUsed<p.speedNeeded;
+  }
+  if(canAfford && chargesLeft){ boostBtn.classList.remove('disabled'); } else { boostBtn.classList.add('disabled'); }
+}
+
+/* ============================================================
+   SPEED SYSTEM — costs 100 score per use. Reaching the next
+   planet requires a set number of SPEED charges based on the
+   real distance/light-time between the planets.
+============================================================ */
+const SPEED_COST = 100;
+function useSpeed(){
+  if(game.state!==State.PLAYING && game.state!==State.BOSS) return;
+  if(game.score<SPEED_COST) return;
+
+  // ---- boss-escape phase: pressing SPEED enough times ends the mission ----
+  if(game.state===State.BOSS && bossDefeated){
+    if(game.bossEscapeUsed>=BOSS_ESCAPE_NEEDED) return;
+    game.score -= SPEED_COST;
+    ship.boosting = 1.6;
+    Audio_.boost();
+    game.bossEscapeUsed += 1;
+    addFloatText('-100 ⚡ '+game.bossEscapeUsed+'/'+BOSS_ESCAPE_NEEDED,'#ffb84b');
+    updateHud();
+    if(game.bossEscapeUsed>=BOSS_ESCAPE_NEEDED){
+      setTimeout(missionComplete, 300);
+    }
+    return;
+  }
+
+  const p = (game.state===State.PLAYING) ? PLANETS[game.planetIndex] : null;
+  if(p && p.speedNeeded>0 && game.speedChargesUsed>=p.speedNeeded) return;
+
+  game.score -= SPEED_COST;
+  ship.boosting = 1.6;
+  Audio_.boost();
+  if(p && p.speedNeeded>0){
+    game.speedChargesUsed += 1;
+    addFloatText('-100 ⚡ '+game.speedChargesUsed+'/'+p.speedNeeded,'#ffb84b');
+  } else {
+    addFloatText('-100 ⚡ BOOST!','#ffb84b');
+  }
+  updateHud();
+}
+
+/* ============================================================
+   DIALOG SYSTEM (science question + alien puzzle share this UI)
+============================================================ */
+const dialogPanel=document.getElementById('dialogPanel');
+const dialogName=document.getElementById('dialogName');
+const dialogAvatar=document.getElementById('dialogAvatar');
+const dialogText=document.getElementById('dialogText');
+const choicesEl=document.getElementById('choices');
+const feedbackEl=document.getElementById('dialogFeedback');
+const continueBtn=document.getElementById('dialogContinue');
+
+function openDialog(opts){
+  // opts: {speaker,avatar,color,intro,question,choicesArr,correctIdx,exp,onResolved, allowRetryOnce}
+  game.state = State.DIALOG;
+  Audio_.engineStop();
+  dialogPanel.classList.remove('hidden');
+  dialogName.textContent = opts.speaker;
+  dialogAvatar.textContent = opts.avatar;
+  dialogAvatar.style.color = opts.color||'#6cf';
+  dialogText.textContent = opts.intro ? opts.intro : opts.question;
+  feedbackEl.textContent='';
+  continueBtn.classList.add('hidden');
+  choicesEl.innerHTML='';
+  let resolved=false;
+  let attempts=0;
+  const order = opts.choicesArr.map((c,i)=>i);
+  shuffle(order);
+
+  function renderQuestionStep(){
+    dialogText.textContent = opts.question;
+    choicesEl.innerHTML='';
+    order.forEach(origIdx=>{
+      const btn=document.createElement('button');
+      btn.className='choiceBtn';
+      btn.textContent=opts.choicesArr[origIdx];
+      btn.addEventListener('click', ()=>{
+        if(resolved) return;
+        attempts++;
+        if(origIdx===opts.correctIdx){
+          resolved=true;
+          btn.classList.add('correct');
+          Audio_.correct();
+          feedbackEl.style.color='#7fffa0';
+          feedbackEl.textContent='✨ CORRECT!  '+opts.exp;
+          opts.onCorrect && opts.onCorrect(attempts);
+          continueBtn.classList.remove('hidden');
+        } else {
+          btn.classList.add('wrong');
+          btn.disabled=true;
+          Audio_.wrong();
+          if(opts.mode==='puzzle' && attempts<2){
+            feedbackEl.style.color='#ffd27a';
+            feedbackEl.textContent='💡 Hint: ลองคิดอีกครั้ง...';
+          } else {
+            resolved=true;
+            feedbackEl.style.color='#ff8290';
+            const correctText = opts.choicesArr[opts.correctIdx];
+            feedbackEl.textContent='⚠️ TRY AGAIN! คำตอบที่ถูกคือ "'+correctText+'"  '+opts.exp;
+            opts.onWrong && opts.onWrong(attempts);
+            continueBtn.classList.remove('hidden');
+          }
+        }
+      });
+      choicesEl.appendChild(btn);
+    });
+  }
+  renderQuestionStep();
+
+  continueBtn.onclick = ()=>{
+    dialogPanel.classList.add('hidden');
+    opts.onResolved && opts.onResolved();
+  };
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } }
+
+/* ---- trigger: crash -> science challenge ---- */
+function triggerScienceChallenge(){
+  const p = PLANETS[game.planetIndex];
+  const qs = p.questions;
+  const q = qs[Math.floor(Math.random()*qs.length)];
+  openDialog({
+    speaker:'NOVA', avatar:'🤖', color:'#7bd8ff', mode:'question',
+    intro:'NOVA: ตรวจพบความเสียหายของยาน! ตอบคำถามวิทยาศาสตร์เพื่อกู้คืนระบบ',
+    question:q.q, choicesArr:q.a, correctIdx:q.correct, exp:q.exp,
+    onCorrect:()=>{ game.correctCount++; game.score+=10; game.crystals+=1; updateHud(); },
+    onWrong:()=>{ game.wrongCount++; damagePlayer(); },
+    onResolved:()=>{
+      if(game.health<=0){ return; } // handled by damagePlayer -> gameOver
+      resumeGameplay();
+    }
+  });
+}
+
+/* ---- trigger: alien puzzle when reaching planet target distance ---- */
+function triggerAlienPuzzle(){
+  const p = PLANETS[game.planetIndex];
+  if(!p.alien){ game.alienDone=true; resumeGameplay(); return; }
+  const al=p.alien;
+  Audio_.alien();
+  openDialog({
+    speaker:al.name, avatar:al.emoji, color:al.color, mode:'puzzle',
+    intro: al.name+': '+al.desc,
+    question: al.puzzle.q, choicesArr: al.puzzle.a, correctIdx: al.puzzle.correct, exp: al.puzzle.exp,
+    onCorrect:()=>{ game.correctCount++; game.score+=10; game.crystals+=1; game.alienDone=true; updateHud(); },
+    onWrong:(attempts)=>{ game.wrongCount++; game.alienDone=true; damagePlayer(); },
+    onResolved:()=>{
+      if(game.health<=0) return;
+      if(p.speedNeeded>0){ planetComplete(); } else { resumeGameplay(); }
+    }
+  });
+}
+
+function resumeGameplay(){
+  if(game.state===State.BOSS){ /* handled separately */ return; }
+  game.state=State.PLAYING;
+  Audio_.engineStart();
+}
+
+/* ============================================================
+   DAMAGE / GAME OVER
+============================================================ */
+function damagePlayer(){
+  game.health -= 1;
+  ship.hitFlash = 0.4;
+  gameCanvas.classList.add('shake'); setTimeout(()=>gameCanvas.classList.remove('shake'),350);
+  Audio_.crash();
+  updateHud();
+  if(game.health<=0){
+    setTimeout(()=>gameOverFail(), 450);
+  }
+}
+
+function gameOverFail(){
+  dialogPanel.classList.add('hidden');
+  Audio_.engineStop();
+  game.state=State.FAIL;
+  setHudVisible(false);
+  document.getElementById('failScore').textContent=game.score;
+  document.getElementById('failDist').textContent=Math.floor(game.distance)+'m';
+  document.getElementById('failCorrect').textContent=game.correctCount;
+  document.getElementById('failCrystal').textContent=game.crystals;
+  showScreen('fail');
+}
+
+/* ============================================================
+   PLANET COMPLETE -> unlock next / go to map or boss
+============================================================ */
+function planetComplete(){
+  game.score += 30; // travel bonus
+  game.unlockedPlanets = Math.max(game.unlockedPlanets, game.planetIndex+2);
+  updateHud();
+  if(game.planetIndex >= PLANETS.length-1){
+    // all planets done -> unknown signal -> boss
+    triggerUnknownSignal();
+  } else {
+    renderMap();
+    showScreen('map');
+    game.state=State.MAP;
+  }
+}
+
+function triggerUnknownSignal(){
+  showScreen('transition');
+  document.getElementById('transitionEmoji').textContent='🌌';
+  document.getElementById('transitionText').textContent='NOVA: ตรวจพบสัญญาณจากนอกเส้นทางสำรวจ...';
+  setTimeout(()=>{
+    document.getElementById('transitionText').textContent='พลังงานจาก Alien ทุกดวงรวมตัวกัน... เปิด Portal สู่ FINAL MISSION';
+    setTimeout(startBoss, 1600);
+  }, 1400);
+}
+
+/* ============================================================
+   GALACTIC MAP — Solar-system style diagram (sun on the left,
+   elliptical orbits, planets receding to the right)
+============================================================ */
+const mapCanvas = document.getElementById('mapCanvas');
+const mctx = mapCanvas.getContext('2d');
+let mapHitboxes=[]; // {px,py,r,index}
+let mapSelectedIndex=null;
+let mapStars=null;
+
+const MAP_POS = [
+  {x:0.30,y:0.54}, // earth
+  {x:0.42,y:0.50}, // mars
+  {x:0.57,y:0.45}, // jupiter
+  {x:0.72,y:0.40}, // saturn
+  {x:0.85,y:0.36}, // uranus
+  {x:0.95,y:0.33}  // neptune
+];
+
+function resizeMapCanvas(){
+  const rect = mapCanvas.getBoundingClientRect();
+  mapCanvas.width = rect.width*DPR; mapCanvas.height = rect.height*DPR;
+  mctx.setTransform(DPR,0,0,DPR,0,0);
+  drawSolarSystemMap();
+}
+
+function drawSolarSystemMap(){
+  const rect = mapCanvas.getBoundingClientRect();
+  const w=rect.width, h=rect.height;
+  if(!w||!h) return;
+  if(!mapStars || mapStars.w!==w){
+    mapStars={w, list:Array.from({length:70},()=>({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.4+.3}))};
+  }
+  mctx.clearRect(0,0,w,h);
+  mctx.fillStyle='#04030c'; mctx.fillRect(0,0,w,h);
+  mctx.fillStyle='rgba(255,255,255,.8)';
+  mapStars.list.forEach(s=>{ mctx.globalAlpha=0.4+Math.random()*0.4; mctx.beginPath(); mctx.arc(s.x,s.y,s.r,0,7); mctx.fill(); });
+  mctx.globalAlpha=1;
+
+  const sunX=w*0.09, sunY=h*0.62;
+  const glowR = w*0.20;
+  const gr=mctx.createRadialGradient(sunX,sunY,2,sunX,sunY,glowR);
+  gr.addColorStop(0,'#fff6d8'); gr.addColorStop(0.25,'#ffb04b'); gr.addColorStop(1,'rgba(255,90,20,0)');
+  mctx.fillStyle=gr; mctx.beginPath(); mctx.arc(sunX,sunY,glowR,0,7); mctx.fill();
+  mctx.fillStyle='#ffcf6b'; mctx.shadowColor='#ff9d3d'; mctx.shadowBlur=20;
+  mctx.beginPath(); mctx.arc(sunX,sunY,w*0.045,0,7); mctx.fill();
+  mctx.shadowBlur=0;
+
+  // orbit ellipses
+  MAP_POS.forEach(pos=>{
+    const rx=(pos.x-0.09)*w;
+    const ry=rx*0.26;
+    mctx.strokeStyle='rgba(255,255,255,.28)';
+    mctx.lineWidth=1;
+    mctx.beginPath();
+    mctx.ellipse(sunX, sunY, Math.max(4,rx), Math.max(2,ry), -0.06, 0, Math.PI*2);
+    mctx.stroke();
+  });
+
+  mapHitboxes=[];
+  PLANETS.forEach((p,i)=>{
+    const pos=MAP_POS[i];
+    const px=pos.x*w, py=pos.y*h;
+    const r=(9+i*2.6)*(w/700);
+    const locked = i>=game.unlockedPlanets;
+    const completed = i<game.unlockedPlanets-1;
+    const isCurrentSelectable = !locked;
+
+    mctx.save();
+    mctx.globalAlpha = locked?0.32:1;
+    if(!locked){ mctx.shadowColor=p.color; mctx.shadowBlur=16; }
+    const g=mctx.createRadialGradient(px-r*0.3,py-r*0.3,r*0.15,px,py,r);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(0.18,p.color); g.addColorStop(1,'#00000090');
+    mctx.fillStyle=g;
+    mctx.beginPath(); mctx.arc(px,py,r,0,7); mctx.fill();
+    if(p.id==='saturn'){
+      mctx.strokeStyle='rgba(255,224,138,.85)';
+      mctx.lineWidth=Math.max(1.5,r*0.22);
+      mctx.beginPath(); mctx.ellipse(px,py,r*1.8,r*0.55,-0.32,0,7); mctx.stroke();
+    }
+    mctx.restore();
+
+    if(!locked && i===mapSelectedIndex){
+      mctx.strokeStyle='#fff'; mctx.lineWidth=2;
+      mctx.beginPath(); mctx.arc(px,py,r+6,0,7); mctx.stroke();
+    }
+    if(completed){
+      mctx.fillStyle='#7fffa0'; mctx.font=(10*(w/700))+'px sans-serif'; mctx.textAlign='center';
+      mctx.fillText('✔', px, py-r-6);
+    }
+
+    mctx.fillStyle = locked? 'rgba(255,255,255,.35)':'#fff';
+    mctx.font=(Math.max(9,11*(w/700)))+'px sans-serif'; mctx.textAlign='center';
+    mctx.fillText(p.emoji+' '+p.name, px, py+r+14);
+
+    mapHitboxes.push({px,py,r:r+10,index:i,locked});
+  });
+}
+
+function renderMap(){
+  mapSelectedIndex=null;
+  document.getElementById('mapInfoPanel').classList.add('hidden');
+  requestAnimationFrame(()=>{ resizeMapCanvas(); });
+}
+
+mapCanvas.addEventListener('click', e=>{
+  const rect=mapCanvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let hit=null;
+  for(const hb of mapHitboxes){
+    const dx=mx-hb.px, dy=my-hb.py;
+    if(dx*dx+dy*dy <= hb.r*hb.r){ hit=hb; break; }
+  }
+  if(!hit || hit.locked){ return; }
+  mapSelectedIndex=hit.index;
+  drawSolarSystemMap();
+  const p=PLANETS[hit.index];
+  const fact=distanceFactText(p);
+  document.getElementById('mapInfoText').innerHTML =
+    '<b>'+p.emoji+' '+p.name+'</b><br>'+(fact? fact : 'ด่านฝึกควบคุมยาน — เริ่มต้นการเดินทางจากโลก');
+  document.getElementById('mapInfoPanel').classList.remove('hidden');
+});
+window.addEventListener('resize', ()=>{ if(game.state===State.MAP) resizeMapCanvas(); });
+
+/* ============================================================
+   BOSS BATTLE
+============================================================ */
+function startBoss(){
+  showScreen(null); setHudVisible(true);
+  document.getElementById('bossBar').classList.remove('hidden');
+  if(isTouchDevice) document.getElementById('laserBtn').classList.remove('hidden');
+  boss = { hp:5, maxHp:5, x:0.5, phase:0, questionsUsed:[] };
+  laserCooldown=0; laserFlashTimer=0; bossDefeated=false;
+  game.bossEscapeUsed=0;
+  obstacles=[]; crystalsList=[]; particles=[]; spawnTimer=0;
+  smallAliens=[]; alienSpawnTimer=0;
+  resetShip();
+  document.getElementById('planetLabel').textContent='👾 COSMIC CHAOS';
+  updateBossBar();
+  game.state=State.BOSS;
+  Audio_.engineStart();
+}
+function updateBossBar(){
+  document.getElementById('bossHpInner').style.width = Math.max(0,(boss.hp/boss.maxHp*100))+'%';
+}
+function missionComplete(){
+  Audio_.complete();
+  smallAliens=[];
+  spawnParticles(0.5,0.4,'#ffe37a',60,2);
+  game.score += 100;
+  setTimeout(()=>{
+    dialogPanel.classList.add('hidden');
+    playReturnToEarthAnimation();
+  }, 900);
+}
+
+/* ---- ending cinematic: rocket flies back home to Earth ---- */
+function playReturnToEarthAnimation(){
+  Audio_.engineStop();
+  setHudVisible(false);
+  showScreen('transition');
+  const emoji = document.getElementById('transitionEmoji');
+  const text = document.getElementById('transitionText');
+  emoji.className=''; emoji.textContent='🚀';
+  text.textContent = 'ภารกิจสำเร็จ! NOVA-X กำลังมุ่งหน้ากลับสู่โลก...';
+  void emoji.offsetWidth; // restart animation
+  emoji.classList.add('return-flight');
+  setTimeout(()=>{
+    emoji.className=''; emoji.textContent='🌍';
+    void emoji.offsetWidth;
+    emoji.classList.add('earth-pop');
+    text.textContent='ยินดีต้อนรับกลับบ้าน นักสำรวจ! โลกปลอดภัยแล้ว 🎉';
+    Audio_.complete();
+    setTimeout(()=>{
+      emoji.className='';
+      showEndScreen(true);
+    }, 1900);
+  }, 2300);
+}
+
+/* ============================================================
+   END SCREEN
+============================================================ */
+function showEndScreen(victory){
+  Audio_.engineStop();
+  setHudVisible(false);
+  game.state=State.END;
+  document.getElementById('endTitle').textContent = victory? '🚀 MISSION COMPLETE!' : 'MISSION ENDED';
+  document.getElementById('endSubtitle').textContent = victory? 'YOU SAVED THE SOLAR SYSTEM!' : '';
+  document.getElementById('endScore').textContent = game.score;
+  document.getElementById('endCrystal').textContent = game.crystals;
+  document.getElementById('endHealth').textContent = game.health;
+  document.getElementById('endCorrect').textContent = game.correctCount;
+  document.getElementById('endWrong').textContent = game.wrongCount;
+  document.getElementById('endDist').textContent = Math.floor(game.distance)+'m';
+  const elapsed = Math.floor((performance.now()-game.startTime)/1000);
+  document.getElementById('endTime').textContent = elapsed+'s';
+  document.getElementById('endRank').textContent = getRank(game.score);
+  showScreen('end');
+}
+
+/* ============================================================
+   HIGH SCORE (localStorage)
+============================================================ */
+const HS_KEY='scienceSpaceRun_highscores';
+function loadHighScores(){
+  try{ return JSON.parse(localStorage.getItem(HS_KEY))||[]; }catch(e){ return []; }
+}
+function renderHighScores(){
+  const list=loadHighScores().sort((a,b)=>b.score-a.score).slice(0,5);
+  const el=document.getElementById('hsList');
+  el.innerHTML='';
+  if(list.length===0){ el.innerHTML='<div>ยังไม่มีข้อมูลคะแนน</div>'; return; }
+  list.forEach((e,i)=>{
+    const row=document.createElement('div');
+    row.innerHTML = `<span>${i+1}. ${escapeHtml(e.name)} — ${e.rank}</span><span>${e.score}</span>`;
+    el.appendChild(row);
+  });
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function saveHighScore(){
+  const name = document.getElementById('nameInput').value.trim() || 'EXPLORER';
+  const list = loadHighScores();
+  list.push({name, score:game.score, rank:getRank(game.score)});
+  localStorage.setItem(HS_KEY, JSON.stringify(list));
+  document.getElementById('nameInput').value='';
+  renderHighScores();
+  showScreen('hs');
+}
+
+/* ============================================================
+   COLLISION HELPERS
+============================================================ */
+function dist2(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return dx*dx+dy*dy; }
+
+/* ============================================================
+   MAIN LOOP
+============================================================ */
+let lastTime=performance.now();
+function loop(now){
+  const dt = Math.min(0.05,(now-lastTime)/1000);
+  lastTime = now;
+
+  const activePlanet = game.state===State.BOSS ? null : PLANETS[game.planetIndex] || PLANETS[0];
+  const theme = activePlanet || {sky1:'#150a30', sky2:'#05020f'};
+
+  let speedMult=1;
+  if(game.state===State.PLAYING || game.state===State.BOSS) speedMult = ship.boosting>0 ? 2.2 : 1;
+  drawBackground(dt, speedMult, theme);
+  Audio_.engineSet(speedMult-1 + (game.state===State.PLAYING?0.3:0));
+
+  gctx.clearRect(0,0,W,H);
+
+  if(game.state===State.PLAYING) updateAndDrawPlaying(dt, activePlanet, speedMult);
+  else if(game.state===State.BOSS) updateAndDrawBoss(dt, speedMult);
+  else {
+    // still render ship idle / particles fade in non-play states minimal
+    drawParticles(dt);
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------------- PLAYING STATE LOGIC ---------------- */
+function updateAndDrawPlaying(dt, planet, speedMult){
+  // ship movement toward targetX
+  ship.laneX += (ship.targetX-ship.laneX)*Math.min(1,dt*8);
+  if(ship.boosting>0) ship.boosting -= dt;
+  if(ship.hitFlash>0) ship.hitFlash -= dt;
+
+  const speed = baseSpeed*speedMult*(planet.obstacleSpeed*0.5+0.75);
+  game.distance += speed*60*dt;
+  game.travelInPlanet += speed*60*dt;
+
+  // spawn
+  spawnTimer -= dt;
+  if(spawnTimer<=0){
+    spawnObstacle(planet);
+    if(Math.random()<0.55) spawnCrystal();
+    spawnTimer = Math.max(0.35, 1.1/planet.obstacleRate) * (Math.random()*0.6+0.7);
+  }
+
+  // update obstacles
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    o.y += speed*o.speed*dt*1.4;
+    o.rot += o.rotSpeed*dt;
+    if(o.y>1.15){ obstacles.splice(i,1); continue; }
+  }
+  checkObstacleCollisions();
+
+  // crystals
+  for(let i=crystalsList.length-1;i>=0;i--){
+    const c=crystalsList[i];
+    c.y += speed*1.1*dt*1.4; c.phase+=dt*4;
+    if(c.y>1.15){ crystalsList.splice(i,1); continue; }
+    const cx=c.x, cy=c.y;
+    const shipY=0.80;
+    if(Math.abs(cy-shipY)<0.055 && Math.abs(cx-ship.laneX)<0.06){
+      crystalsList.splice(i,1);
+      game.crystals+=1; game.score+=20;
+      Audio_.collect();
+      spawnParticles(cx*W, cy*H, '#7be3ff', 14, 1);
+      addFloatText('+20 💎','#7be3ff');
+      updateHud();
+    }
+  }
+
+  drawStageDecor(planet);
+  drawObstacles();
+  drawCrystals();
+  drawShip();
+  drawParticles(dt);
+
+  // planet completion check
+  if(planet.speedNeeded>0){
+    if(!game.alienDone && game.speedChargesUsed>=planet.speedNeeded){
+      game.state=State.DIALOG;
+      triggerAlienPuzzle();
+      return;
+    }
+  } else {
+    if(!game.alienDone && game.travelInPlanet>=game.planetTarget){
+      game.state=State.DIALOG;
+      triggerAlienPuzzle();
+      return;
+    }
+    if(game.alienDone && game.travelInPlanet>=game.planetTarget+250){
+      planetComplete();
+      return;
+    }
+  }
+
+  updateHud();
+}
+
+function checkObstacleCollisions(){
+  const shipY=0.80;
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    if(Math.abs(o.y-shipY)<0.05+o.r*0.5 && Math.abs(o.x-ship.laneX)<0.055+o.r*0.6){
+      obstacles.splice(i,1);
+      spawnParticles(o.x*W, o.y*H, '#ff7a5b', 20, 1.4);
+      // impact feedback only — no heart lost yet. Health is only deducted
+      // if the follow-up science question is answered incorrectly.
+      ship.hitFlash = 0.4;
+      gameCanvas.classList.add('shake'); setTimeout(()=>gameCanvas.classList.remove('shake'),350);
+      Audio_.crash();
+      game.state=State.DIALOG;
+      setTimeout(()=>triggerScienceChallenge(), 300);
+      return;
+    }
+  }
+}
+
+/* ---------------- BOSS STATE LOGIC ---------------- */
+function updateAndDrawBoss(dt, speedMult){
+  ship.laneX += (ship.targetX-ship.laneX)*Math.min(1,dt*8);
+  if(ship.boosting>0) ship.boosting -= dt;
+  if(ship.hitFlash>0) ship.hitFlash -= dt;
+
+  if(laserCooldown>0){
+    laserCooldown -= dt;
+    document.getElementById('laserBtn').classList.add('disabled');
+  } else {
+    document.getElementById('laserBtn').classList.remove('disabled');
+  }
+  if(laserFlashTimer>0) laserFlashTimer -= dt;
+
+  boss.phase += dt;
+  boss.x = 0.5 + Math.sin(boss.phase*0.7)*0.32;
+
+  spawnTimer -= dt;
+  if(spawnTimer<=0){
+    // boss energy projectiles keep coming even during the escape sequence
+    obstacles.push({x:boss.x+(Math.random()-0.5)*0.3, y:0.22, r:0.03, type:'energy', speed:1.6+Math.random()*0.6, rot:0, rotSpeed:2});
+    if(Math.random()<0.4) spawnCrystal();
+    spawnTimer = 0.55;
+  }
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    o.y += baseSpeed*1.5*o.speed*dt*1.4;
+    o.rot += o.rotSpeed*dt;
+    if(o.y>1.15){ obstacles.splice(i,1); continue; }
+  }
+  checkObstacleCollisions();
+
+  if(bossDefeated){
+    // boss has dissolved — a swarm of small aliens keeps spawning for the
+    // player to shoot down while they also mash SPEED to escape
+    updateSmallAliens(dt);
+  }
+
+  for(let i=crystalsList.length-1;i>=0;i--){
+    const c=crystalsList[i];
+    c.y += baseSpeed*1.3*dt*1.4; c.phase+=dt*4;
+    if(c.y>1.15){ crystalsList.splice(i,1); continue; }
+    if(Math.abs(c.y-0.80)<0.055 && Math.abs(c.x-ship.laneX)<0.06){
+      crystalsList.splice(i,1); game.crystals+=1; game.score+=20; Audio_.collect();
+      spawnParticles(c.x*W,c.y*H,'#7be3ff',14,1); updateHud();
+    }
+  }
+
+  drawStageDecor({color:'#ff5bd0', sky1:'#180735',sky2:'#03010a'});
+  if(!bossDefeated) drawBossEntity();
+  else drawSmallAliens();
+  drawLaserBeam();
+  drawObstacles();
+  drawCrystals();
+  drawShip();
+  drawParticles(dt);
+  updateHud();
+}
+
+/* ============================================================
+   RENDERING HELPERS
+============================================================ */
+function drawStageDecor(planet){
+  // big planet sphere in background for flavor
+  gctx.save();
+  gctx.globalAlpha=0.5;
+  const cx=W*0.82, cy=H*0.18, r=Math.min(W,H)*0.22;
+  const g=gctx.createRadialGradient(cx-r*0.3,cy-r*0.3,r*0.1,cx,cy,r);
+  g.addColorStop(0, (planet.color||'#88f')+'cc');
+  g.addColorStop(1, '#000000');
+  gctx.fillStyle=g;
+  gctx.beginPath(); gctx.arc(cx,cy,r,0,7); gctx.fill();
+  gctx.restore();
+}
+
+function drawObstacles(){
+  obstacles.forEach(o=>{
+    const x=o.x*W, y=o.y*H, r=o.r*Math.min(W,H);
+    gctx.save();
+    gctx.translate(x,y); gctx.rotate(o.rot);
+    if(o.type==='energy'){
+      gctx.shadowColor='#ff5bd0'; gctx.shadowBlur=18;
+      gctx.fillStyle='rgba(255,91,208,.85)';
+      gctx.beginPath(); gctx.arc(0,0,r,0,7); gctx.fill();
+    } else {
+      gctx.shadowColor='#ff8a5b'; gctx.shadowBlur=10;
+      gctx.fillStyle='#7a5a44';
+      gctx.beginPath();
+      for(let i=0;i<7;i++){
+        const a=i/7*6.28, rr=r*(0.7+((i*37)%10)/20);
+        gctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+      }
+      gctx.closePath(); gctx.fill();
+      gctx.fillStyle='rgba(255,255,255,.08)';
+      gctx.beginPath(); gctx.arc(-r*0.2,-r*0.2,r*0.35,0,7); gctx.fill();
+    }
+    gctx.restore();
+  });
+}
+function drawCrystals(){
+  crystalsList.forEach(c=>{
+    const x=c.x*W, y=c.y*H, r=(c.r*Math.min(W,H))*(1+Math.sin(c.phase)*0.15);
+    gctx.save(); gctx.translate(x,y); gctx.rotate(c.phase*0.5);
+    gctx.shadowColor='#7be3ff'; gctx.shadowBlur=16;
+    gctx.fillStyle='#a9f3ff';
+    gctx.beginPath();
+    gctx.moveTo(0,-r); gctx.lineTo(r*0.6,0); gctx.lineTo(0,r); gctx.lineTo(-r*0.6,0);
+    gctx.closePath(); gctx.fill();
+    gctx.restore();
+  });
+}
+function drawShip(){
+  const x=ship.laneX*W, y=0.80*H;
+  const r=Math.min(W,H)*0.045;
+  gctx.save();
+  gctx.translate(x,y);
+  const tilt=(ship.targetX-ship.laneX)*2;
+  gctx.rotate(tilt*0.6);
+
+  // engine light trail
+  const trailLen = ship.boosting>0 ? r*3.2 : r*1.6;
+  const tg=gctx.createLinearGradient(0,r*0.6,0,r*0.6+trailLen);
+  tg.addColorStop(0, ship.boosting>0?'rgba(255,190,90,.9)':'rgba(120,200,255,.8)');
+  tg.addColorStop(1,'rgba(0,0,0,0)');
+  gctx.fillStyle=tg;
+  gctx.beginPath();
+  gctx.moveTo(-r*0.35, r*0.6); gctx.lineTo(r*0.35, r*0.6); gctx.lineTo(0, r*0.6+trailLen);
+  gctx.closePath(); gctx.fill();
+
+  // body
+  gctx.shadowColor = ship.hitFlash>0? '#ff3b3b' : '#7bd8ff';
+  gctx.shadowBlur=22;
+  gctx.fillStyle = ship.hitFlash>0 ? '#ff9a9a' : '#eaf6ff';
+  gctx.beginPath();
+  gctx.moveTo(0,-r*1.3);
+  gctx.lineTo(r*0.85,r*0.7);
+  gctx.lineTo(0,r*0.4);
+  gctx.lineTo(-r*0.85,r*0.7);
+  gctx.closePath(); gctx.fill();
+
+  gctx.fillStyle='#4bd8ff';
+  gctx.beginPath(); gctx.arc(0,-r*0.15,r*0.3,0,7); gctx.fill();
+
+  gctx.restore();
+}
+function drawBossEntity(){
+  const x=boss.x*W, y=0.22*H, r=Math.min(W,H)*0.11;
+  gctx.save(); gctx.translate(x,y);
+  const pulse = 1+Math.sin(boss.phase*3)*0.06;
+  gctx.shadowColor='#ff5bd0'; gctx.shadowBlur=40;
+  const g=gctx.createRadialGradient(0,0,r*0.1,0,0,r*pulse);
+  g.addColorStop(0,'#ffe0f7'); g.addColorStop(0.5,'#ff5bd0'); g.addColorStop(1,'#3a0a6e00');
+  gctx.fillStyle=g;
+  gctx.beginPath(); gctx.arc(0,0,r*pulse,0,7); gctx.fill();
+  // energy particles orbit
+  for(let i=0;i<6;i++){
+    const a=boss.phase*2+i*(6.28/6);
+    gctx.fillStyle='#fff';
+    gctx.beginPath(); gctx.arc(Math.cos(a)*r*0.8, Math.sin(a)*r*0.8, 4,0,7); gctx.fill();
+  }
+  gctx.restore();
+}
+function drawParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.age+=dt; if(p.age>p.life){ particles.splice(i,1); continue; }
+    p.x+=p.vx*60*dt; p.y+=p.vy*60*dt;
+    const alpha=1-p.age/p.life;
+    gctx.fillStyle=p.color; gctx.globalAlpha=alpha;
+    gctx.beginPath(); gctx.arc(p.x,p.y,p.r,0,7); gctx.fill();
+    gctx.globalAlpha=1;
+  }
+}
+
+/* ============================================================
+   INITIAL HIGH SCORE RENDER
+============================================================ */
+renderHighScores();
+
+})();
+
+</script>
+</body>
+</html>
